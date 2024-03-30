@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "author": "@sapphire",
-  "license": "UNLICENSE",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "@sapphire/decorators": "^6.0.4",
