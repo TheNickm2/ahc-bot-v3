@@ -1,10 +1,10 @@
-# TypeScript Sapphire Bot example
+# AHC Bot v3
 
-This is a basic setup of a Discord bot using the [sapphire framework][sapphire] written in TypeScript
+This is v3 of AHC’s custom Discord bot, built using the [sapphire framework](https://github.com/sapphiredev/framework) written in TypeScript
 
 ## How to use it?
 
-### Prerequisite
+### Installation
 
 ```sh
 npm install
@@ -12,19 +12,16 @@ npm install
 
 ### Development
 
-This example can be run with `tsc-watch` to watch the files and automatically restart your bot.
+This command will run `tsc-watch` to watch the files and automatically restart your bot.
 
 ```sh
-npm run watch:start
+npm run dev
 ```
 
 ### Production
 
-You can also run the bot with `npm dev`, this will first build your code and then run `node ./dist/index.js`. But this is not the recommended way to run a bot in production.
+If using CI/CD, your pipeline should `npm run build` and then `npm run start` upon build success. If manually deploying, you can simply chain the commands `npm run build && npm run start` to build and start the bot for production.
 
 ## License
 
-Dedicated to the public domain via the [Unlicense], courtesy of the Sapphire Community and its contributors.
-
-[sapphire]: https://github.com/sapphiredev/framework
-[unlicense]: https://github.com/sapphiredev/examples/blob/main/LICENSE.md
+See LICENSE.md
