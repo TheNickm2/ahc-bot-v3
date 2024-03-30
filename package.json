@@ -39,7 +39,7 @@
     "dev": "npm run watch:start",
     "watch:start": "tsc-watch --onSuccess \"npm run start\"",
     "format": "prettier --write \"src/\"",
-    "lint": "eslint .",
+    "lint": "eslint . && npm run format",
     "prepare": "husky"
   },
   "prettier": "@sapphire/prettier-config",
