@@ -24,4 +24,4 @@ If using CI/CD, your pipeline should `npm run build` and then `npm run start` up
 
 ## License
 
-See LICENSE.md
+See [LICENSE.md](LICENSE.md)
