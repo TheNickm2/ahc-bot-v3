@@ -22,9 +22,11 @@
     "@sapphire/ts-config": "^5.0.0",
     "@types/node": "^20.11.5",
     "@types/ws": "^8.5.10",
+    "eslint": "^8.57.0",
     "prettier": "^3.2.4",
     "tsc-watch": "^6.0.4",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "typescript-eslint": "^7.4.0"
   },
   "scripts": {
     "sapphire": "sapphire",
