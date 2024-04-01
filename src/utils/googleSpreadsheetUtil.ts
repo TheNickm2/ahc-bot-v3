@@ -14,8 +14,6 @@ import { JWT } from "google-auth-library";
 export class GoogleSpreadsheetUtil {
   // Google Auth Object
   private readonly GoogleAuth: JWT;
-  // Flag to check if the document metadata is loaded
-  private isInitialized = false;
   // Google Spreadsheet Object, public to allow direct interaction with the google-spreadsheet library as needed
   public readonly GoogleSpreadsheet: GoogleSpreadsheet;
 
@@ -40,21 +38,19 @@ export class GoogleSpreadsheetUtil {
   }
 
   /**
-   * Internal function to initialize the document metadata.
+   * Internal function to load the document metadata.
    *
    * @private
    * @return {*}
    * @memberof GoogleSpreadsheetUtil
    */
-  private async init() {
-    if (this.isInitialized) return;
+  private async loadDocumentMeta() {
     await this.GoogleSpreadsheet.loadInfo();
     container.logger.debug(
       "Google Spreadsheet Metadata Loaded",
       this.GoogleSpreadsheet.title,
       this.GoogleSpreadsheet.spreadsheetId,
     );
-    this.isInitialized = true;
   }
 
   /**
@@ -66,7 +62,7 @@ export class GoogleSpreadsheetUtil {
    * @memberof GoogleSpreadsheetUtil
    */
   public async getSheet(sheetIndex = 0, sheetTitle?: string) {
-    if (!this.isInitialized) await this.init();
+    await this.loadDocumentMeta();
     if (sheetTitle) {
       return await this.GoogleSpreadsheet.sheetsByTitle[sheetTitle];
     }

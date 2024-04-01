@@ -7,7 +7,6 @@ export class MemberSheetHelper {
   private readonly googleSpreadsheetUtil: GoogleSpreadsheetUtil;
   private memberSheet: GoogleSpreadsheetWorksheet | undefined;
   private duesSheet: GoogleSpreadsheetWorksheet | undefined;
-  private isInitialized = false;
 
   private memberList: Collection<string, AhfGuildMemberSheetData> =
     new Collection();
@@ -22,13 +21,6 @@ export class MemberSheetHelper {
     this.googleSpreadsheetUtil = new GoogleSpreadsheetUtil(
       process.env.MEMBER_LIST_SPREADSHEET_ID,
     );
-  }
-
-  private async init() {
-    if (this.isInitialized) return;
-    await this.loadMemberList();
-    await this.loadTopSellers();
-    this.isInitialized = true;
   }
 
   private async loadMemberList() {
@@ -63,12 +55,12 @@ export class MemberSheetHelper {
   }
 
   public async getMemberList() {
-    if (!this.isInitialized) await this.init();
+    await this.loadMemberList();
     return this.memberList;
   }
 
   public async getTopSellers() {
-    if (!this.isInitialized) await this.init();
+    await this.loadTopSellers();
     return this.topSellers;
   }
 }
