@@ -38,7 +38,7 @@
     "generate": "sapphire generate",
     "build": "tsc --noEmit",
     "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsc-watch --noEmit --onSuccess \"tsx src/index.ts\"",
     "watch": "npm run dev",
     "lint": "eslint --fix src/ && prettier --write src/",
     "prepare": "husky"
