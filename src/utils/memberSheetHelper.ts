@@ -1,7 +1,7 @@
 import type { GoogleSpreadsheetWorksheet } from "google-spreadsheet";
 import { GoogleSpreadsheetUtil } from "./googleSpreadsheetUtil";
 import { Collection } from "discord.js";
-import type { AhfGuildMemberSheetData } from "../types/AhfGuildMemberSheetData";
+import type { AhfGuildMemberSheetData } from "../types/ahfGuildMemberSheetData";
 
 export class MemberSheetHelper {
   private readonly googleSpreadsheetUtil: GoogleSpreadsheetUtil;

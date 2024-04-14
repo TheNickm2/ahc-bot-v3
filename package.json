@@ -36,7 +36,7 @@
   "scripts": {
     "sapphire": "sapphire",
     "generate": "sapphire generate",
-    "build": "tsc --noEmit",
+    "build": "npm run lint && tsc --noEmit",
     "start": "tsx src/index.ts",
     "dev": "tsc-watch --noEmit --onSuccess \"tsx src/index.ts\"",
     "watch": "npm run dev",
