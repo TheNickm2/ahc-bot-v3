@@ -5,6 +5,8 @@
 		"outDir": "dist",
 		"tsBuildInfoFile": "dist/.tsbuildinfo",
 		"strict": true,
+		"module": "esnext",
+		"moduleResolution": "bundler",
 		"resolveJsonModule": true,
 	},
 	"include": ["src"],
