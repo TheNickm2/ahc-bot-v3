@@ -1,5 +1,5 @@
 import type { AuctionLot } from '../types/auction';
-import type { APIEmbedField, GuildTextBasedChannel } from 'discord.js';
+import type { APIEmbedField, Collection, GuildTextBasedChannel } from 'discord.js';
 import { EmbedBuilder } from '@discordjs/builders';
 import { Constants } from '../config/constants';
 
@@ -81,4 +81,21 @@ export function InfoCenterEmbed() {
 		.setDescription(
 			`Click the buttons below to navigate the AHC Info Center right here within Discord (or click "AHF Info Center" above to open the full info center in your web browser!)\n\nThe AHC Info Center is typically updated at least once daily, but may not always show real-time data.`,
 		);
+}
+
+export function TopSellersEmbed(topSellers: Collection<string, number>) {
+	let topSellerString = '';
+	topSellers.forEach((amount, sellerName) => {
+		topSellerString += `${Constants.EMOTES.LIST_ITEM} ${sellerName} (${amount.toLocaleString('en-US')})\n`;
+	});
+
+	return new EmbedBuilder()
+		.setDescription(`# ${Constants.EMOTES.AHC_BANNER} Top Sellers\n\n${topSellerString}`)
+		.setColor(Constants.EMBED_COLOR)
+		.setThumbnail(Constants.TOP_SELLER_THUMBNAIL)
+		.setAuthor({
+			name: 'AHF Info Center',
+			iconURL: Constants.EMBED_AUTHOR_ICON,
+			url: Constants.INFO_CENTER_LINK,
+		});
 }
