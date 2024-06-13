@@ -4,6 +4,7 @@ import type { ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 import { AuctionEndDates } from '../state/state';
 import Sugar from 'sugar';
+import { AuctionLotHelper } from '../utils/auctionLotHelper';
 
 @ApplyOptions<InteractionHandler.Options>({
 	interactionHandlerType: InteractionHandlerTypes.Button,
@@ -33,11 +34,10 @@ export class ButtonHandler extends InteractionHandler {
 				content: 'A valid date in the future must be provided. Please try again.',
 			});
 		}
-
-		await interaction.reply({
-			content: 'Hello from a button interaction handler!',
-			ephemeral: true,
-		});
+		await interaction.deferReply({ ephemeral: true });
+		const auctionLotHelper = new AuctionLotHelper();
+		const auctionLots = await auctionLotHelper.getAuctionLots();
+		console.log(auctionLots);
 	}
 
 	public override parse(interaction: ButtonInteraction) {

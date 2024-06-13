@@ -1,6 +1,7 @@
 import type { AuctionLot, AuctionLotRow } from '../types/auction';
 import { container } from '@sapphire/framework';
 import { GoogleSpreadsheetUtil } from './googleSpreadsheetUtil';
+import numeral from 'numeral';
 
 export class AuctionLotHelper {
 	private readonly googleSpreadsheetUtil: GoogleSpreadsheetUtil;
@@ -23,15 +24,21 @@ export class AuctionLotHelper {
 			return;
 		}
 		await sheet.loadCells('A2:D100');
-		const rows = await sheet.getRows();
+		const rows = await sheet.getRows<AuctionLotRow>();
 		rows.forEach((row) => {
-			const rowData = row as AuctionLotRow;
-			if (!rowData.Title || !rowData.Description || !rowData['Starting Bid'] || Number.isNaN(rowData['Starting Bid'])) return;
+			const rowData = {
+				Title: row.get('Title'),
+				Description: row.get('Description'),
+				Image: row.get('Image'),
+				'Starting Bid': row.get('Starting Bid'),
+			} as AuctionLotRow;
+			const startingBid = numeral(rowData['Starting Bid']!).value() || 0;
+			if (!rowData.Title || !rowData.Description || !rowData['Starting Bid'] || Number.isNaN(startingBid) || startingBid <= 0) return;
 			this.auctionLots.push({
 				title: rowData.Title,
 				description: rowData.Description,
 				image: rowData.Image,
-				startingBid: Number(rowData['Starting Bid']),
+				startingBid: startingBid,
 			});
 		});
 	}
