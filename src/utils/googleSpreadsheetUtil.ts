@@ -19,15 +19,12 @@ export class GoogleSpreadsheetUtil {
 
 	constructor(sheetId: string) {
 		if (!sheetId) throw new Error('Sheet ID is required');
-		if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
-			throw new Error('Environment Configuration Error. Google Service Account Email is required');
-		}
-		if (!process.env.GOOGLE_PRIVATE_KEY) {
-			throw new Error('Environment Configuration Error. Google Private Key is required');
-		}
+		const serviceAccount = JSON.parse(atob(process.env.GOOGLE_SERVICE_ACCOUNT || '') || '{}');
+		if (!serviceAccount.client_email || !serviceAccount.private_key) throw new Error('Google Service Account environment variable is required.');
 		this.GoogleAuth = new JWT({
-			email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-			key: process.env.GOOGLE_PRIVATE_KEY,
+			email: serviceAccount.client_email,
+			key: serviceAccount.private_key,
+			keyId: serviceAccount.private_key_id || undefined,
 			scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 		});
 		this.GoogleSpreadsheet = new GoogleSpreadsheet(sheetId, this.GoogleAuth);
