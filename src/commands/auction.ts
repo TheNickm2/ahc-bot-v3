@@ -39,7 +39,7 @@ export class UserCommand extends Command {
 		}
 		AuctionEndDates.set(interaction.id, endDate);
 		const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId(Constants.START_AUCTION_BUTTON_ID).setLabel('Start').setStyle(ButtonStyle.Success),
+			new ButtonBuilder().setCustomId(Constants.BUTTON_IDS.START_AUCTION).setLabel('Start').setStyle(ButtonStyle.Success),
 		);
 		return interaction.reply({
 			ephemeral: true,

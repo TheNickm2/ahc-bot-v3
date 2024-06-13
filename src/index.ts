@@ -2,7 +2,7 @@ import './lib/setup';
 
 import { LogLevel, SapphireClient } from '@sapphire/framework';
 import { GatewayIntentBits } from 'discord.js';
-import { MemberCacheManager } from './utils/memberCacheManager';
+import { MemberCacheManagerInstance } from './state/state';
 
 const client = new SapphireClient({
 	defaultPrefix: '!',
@@ -16,7 +16,9 @@ const client = new SapphireClient({
 
 const main = async () => {
 	try {
-		new MemberCacheManager(); // Initialize the member database manager cache on startup
+		// Initialize the member cache manager
+		MemberCacheManagerInstance.getMemberList();
+		MemberCacheManagerInstance.getTopSellers();
 		client.logger.info('Logging in');
 		await client.login();
 		client.logger.info('logged in');

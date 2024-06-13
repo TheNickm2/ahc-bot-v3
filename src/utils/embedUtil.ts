@@ -67,3 +67,18 @@ export function TimestampHelperEmbed(date: Date) {
 		.setDescription(allFormats.map((format) => `\`${format}\`: ${format}`).join('\n\n'))
 		.setColor(Constants.EMBED_COLOR);
 }
+
+export function InfoCenterEmbed() {
+	return new EmbedBuilder()
+		.setTitle('AHF Info Center')
+		.setURL(Constants.INFO_CENTER_LINK)
+		.setAuthor({
+			name: 'AHF Info Center',
+			iconURL: Constants.EMBED_AUTHOR_ICON,
+			url: Constants.INFO_CENTER_LINK,
+		})
+		.setColor(Constants.EMBED_COLOR)
+		.setDescription(
+			`Click the buttons below to navigate the AHC Info Center right here within Discord (or click "AHF Info Center" above to open the full info center in your web browser!)\n\nThe AHC Info Center is typically updated at least once daily, but may not always show real-time data.`,
+		);
+}

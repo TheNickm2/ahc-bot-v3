@@ -77,7 +77,7 @@ export class ButtonHandler extends InteractionHandler {
 	}
 
 	public override parse(interaction: ButtonInteraction) {
-		if (interaction.customId !== Constants.START_AUCTION_BUTTON_ID) return this.none();
+		if (interaction.customId !== Constants.BUTTON_IDS.START_AUCTION) return this.none();
 		return this.some();
 	}
 }
