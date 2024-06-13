@@ -15,7 +15,9 @@ export class AuctionLotHelper {
 
 	private async loadAuctionLots() {
 		this.auctionLots = [];
-		const sheet = await this.googleSpreadsheetUtil.getSheet(undefined, 'Discord Auction Lots');
+		const sheet = await this.googleSpreadsheetUtil.getSheet({
+			title: 'Discord Auction Lots',
+		});
 		if (!sheet) {
 			container.logger.warn('Sheet "Discord Auction Lots" not found');
 			return;
