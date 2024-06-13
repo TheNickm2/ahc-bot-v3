@@ -5,11 +5,16 @@ export const Constants = {
 		CHECK: '<a:check:918626532438704129>',
 		CANCEL: '<a:cancel:942601332567715860>',
 		LIST_ITEM: '<:purpledash:966210158990610433>',
+		INFO: '<:info:985035960305745990>',
+		SERVER_BOOST: '<a:nitroboostspin:909698016141778966>',
 	},
 	EMBED_COLOR: 0xb072ff,
 	EMBED_AUTHOR_ICON: 'https://media.discordapp.net/attachments/925942369965191208/983420398232289370/Animated_Logo_500x500_px_30.gif',
 	INFO_CENTER_LINK: 'https://ahf.gg/',
 	BUTTON_IDS: {
 		START_AUCTION: 'start-auction',
+		TOP_SELLERS: 'top-sellers',
+		CHECK_STATUS: 'check-status',
+		SERVER_BOOSTERS: 'server-boosters',
 	},
 };
