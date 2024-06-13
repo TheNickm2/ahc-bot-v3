@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { ApplicationCommandType, Message } from 'discord.js';
+import { Message } from 'discord.js';
 
 @ApplyOptions<Command.Options>({
 	description: 'ping pong',
@@ -14,17 +14,17 @@ export class UserCommand extends Command {
 			description: this.description,
 		});
 
-		// Register Context Menu command available from any message
-		registry.registerContextMenuCommand({
-			name: this.name,
-			type: ApplicationCommandType.Message,
-		});
+		// // Register Context Menu command available from any message
+		// registry.registerContextMenuCommand({
+		// 	name: this.name,
+		// 	type: ApplicationCommandType.Message,
+		// });
 
-		// Register Context Menu command available from any user
-		registry.registerContextMenuCommand({
-			name: this.name,
-			type: ApplicationCommandType.User,
-		});
+		// // Register Context Menu command available from any user
+		// registry.registerContextMenuCommand({
+		// 	name: this.name,
+		// 	type: ApplicationCommandType.User,
+		// });
 	}
 
 	// Message command
