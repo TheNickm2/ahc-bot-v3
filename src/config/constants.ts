@@ -1,4 +1,11 @@
 export const Constants = {
 	START_AUCTION_BUTTON_ID: 'start-auction',
 	DEFAULT_GUILD_IDS: ['769438260447019038'],
+	EMOTES: {
+		COIN: '<a:coin:726992358251561091>',
+		CHECK: '<a:check:918626532438704129>',
+		CANCEL: '<a:cancel:942601332567715860>',
+		LIST_ITEM: '<:purpledash:966210158990610433>',
+	},
+	EMBED_COLOR: 0xb072ff,
 };

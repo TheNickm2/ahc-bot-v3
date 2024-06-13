@@ -28,6 +28,7 @@ export class UserCommand extends Command {
 	}
 
 	public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+		if (!interaction.inGuild()) return;
 		const endDateString = interaction.options.getString('end', true);
 		const endDate = Sugar.Date.create(endDateString);
 		if (!endDateString || !Sugar.Date.isFuture(endDate)) {
