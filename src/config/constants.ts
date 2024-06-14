@@ -9,6 +9,7 @@ export const Constants = {
 		SERVER_BOOST: '<a:nitroboostspin:909698016141778966>',
 		AHC_BANNER: '<:AHCbanner:975254289888968794>',
 		DEV_TESTING: '<:mushuCreep:1070036171792588932>',
+		DICE: '<a:dice:954277834845741077>',
 	},
 	EMBED_COLOR: 0xb072ff,
 	EMBED_AUTHOR_ICON: 'https://media.discordapp.net/attachments/925942369965191208/983420398232289370/Animated_Logo_500x500_px_30.gif',
@@ -20,5 +21,6 @@ export const Constants = {
 		TOP_SELLERS: 'top-sellers',
 		CHECK_STATUS: 'check-status',
 		SERVER_BOOSTERS: 'server-boosters',
+		REROLL_DICE: 'reroll-dice',
 	},
 };

@@ -1,16 +1,21 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { MemberCacheManagerInstance } from '../state/state';
+import { Constants } from '../config/constants';
 
 @ApplyOptions<Command.Options>({
 	description: 'Info for development purposes',
 })
 export class UserCommand extends Command {
 	public override registerApplicationCommands(registry: Command.Registry) {
-		registry.registerChatInputCommand((builder) =>
-			builder //
-				.setName(this.name)
-				.setDescription(this.description),
+		registry.registerChatInputCommand(
+			(builder) =>
+				builder //
+					.setName(this.name)
+					.setDescription(this.description),
+			{
+				guildIds: Constants.DEFAULT_GUILD_IDS,
+			},
 		);
 	}
 
