@@ -1,5 +1,6 @@
 import type { AuctionLot } from '../types/auction';
 import type { APIEmbedField, Collection, GuildTextBasedChannel } from 'discord.js';
+import type { AhfGuildMemberSheetData } from '../types/ahfGuildMemberSheetData';
 import { EmbedBuilder } from '@discordjs/builders';
 import { Constants } from '../config/constants';
 
@@ -98,4 +99,55 @@ export function TopSellersEmbed(topSellers: Collection<string, number>) {
 			iconURL: Constants.EMBED_AUTHOR_ICON,
 			url: Constants.INFO_CENTER_LINK,
 		});
+}
+
+export function MemberStatusEmbed(member: AhfGuildMemberSheetData) {
+	// Get raffle status keys as they are dynamic
+	const vinnyRaffleKey = Object.keys(member).find((key) => key.startsWith('Vinny Raffle Tickets')) || 'Vinny Raffle Tickets';
+	const bonusRaffleKey = Object.keys(member).find((key) => key.startsWith('Vinny Bonus Tickets')) || 'Vinny Bonus Tickets';
+
+	const a = new EmbedBuilder()
+		.setTitle('Your AHC Status')
+		.setAuthor({
+			name: 'AHF Info Center',
+			iconURL: Constants.EMBED_AUTHOR_ICON,
+			url: Constants.INFO_CENTER_LINK,
+		})
+		.setColor(Constants.EMBED_COLOR)
+		.setDescription(`Hello ${member.Who}! Check your AHC Status below!`)
+		.setFields([
+			{
+				name: 'User ID',
+				value: member.Who,
+				inline: true,
+			},
+			{
+				name: 'Sales',
+				value: member.Sales.toLocaleString('en-us'),
+				inline: true,
+			},
+			{
+				name: 'Requirements Met',
+				value: member.Safe ? `${Constants.EMOTES.CHECK} Yes` : `${Constants.EMOTES.CANCEL} No`,
+				inline: true,
+			},
+			{
+				name: 'Vinny Raffle Tickets',
+				value: Number(member[vinnyRaffleKey] || 0).toLocaleString('en-us'),
+				inline: true,
+			},
+			{
+				name: 'Cash Stash Tickets',
+				value: Number(member[bonusRaffleKey] || 0).toLocaleString('en-us'),
+				inline: true,
+			},
+			{
+				name: 'Mat Raffle Tickets',
+				value: Number(member['Mat Raffle Tickets'] || 0).toLocaleString('en-us'),
+				inline: true,
+			},
+		])
+		.setThumbnail(Constants.AHC_BANNER_IMAGE);
+	console.log(a.toJSON());
+	return a;
 }

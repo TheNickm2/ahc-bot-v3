@@ -13,6 +13,7 @@ export const Constants = {
 	EMBED_COLOR: 0xb072ff,
 	EMBED_AUTHOR_ICON: 'https://media.discordapp.net/attachments/925942369965191208/983420398232289370/Animated_Logo_500x500_px_30.gif',
 	TOP_SELLER_THUMBNAIL: 'https://cdn.discordapp.com/emojis/726992358251561091.gif',
+	AHC_BANNER_IMAGE: 'https://media.discordapp.net/stickers/975254619657756702.png',
 	INFO_CENTER_LINK: 'https://ahf.gg/',
 	BUTTON_IDS: {
 		START_AUCTION: 'start-auction',

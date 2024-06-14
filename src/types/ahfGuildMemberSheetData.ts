@@ -1,6 +1,4 @@
-import type { GoogleSpreadsheetRow } from 'google-spreadsheet';
-
-export interface AhfGuildMemberSheetData extends GoogleSpreadsheetRow {
+export interface AhfGuildMemberSheetData {
 	Who: string;
 	Sales: number;
 	Safe?: boolean;

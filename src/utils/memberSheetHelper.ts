@@ -2,6 +2,7 @@ import type { GoogleSpreadsheetWorksheet } from 'google-spreadsheet';
 import { GoogleSpreadsheetUtil } from './googleSpreadsheetUtil';
 import { Collection } from 'discord.js';
 import type { AhfGuildMemberSheetData } from '../types/ahfGuildMemberSheetData';
+import numeral from 'numeral';
 
 export class MemberSheetHelper {
 	private readonly googleSpreadsheetUtil: GoogleSpreadsheetUtil;
@@ -25,9 +26,14 @@ export class MemberSheetHelper {
 		await this.memberSheet.loadCells('A2:F502');
 		const rows = await this.memberSheet.getRows();
 		rows.forEach((row) => {
-			const who = (row as AhfGuildMemberSheetData).Who?.trim()?.toLowerCase();
-			if (!who) return;
-			this.memberList.set(who, row as AhfGuildMemberSheetData);
+			const who = row.get('Who')?.toLowerCase().trim();
+			const rowData: AhfGuildMemberSheetData = {
+				Who: row.get('Who'),
+				Sales: numeral(row.get('Sales')).value() || 0,
+				Safe: row.get('Safe') === 'TRUE',
+				'Mat Raffle Tickets': numeral(row.get('Mat Raffle Tickets')).value() || 0,
+			};
+			this.memberList.set(who, rowData);
 		});
 	}
 
