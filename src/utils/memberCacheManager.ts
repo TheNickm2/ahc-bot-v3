@@ -16,7 +16,7 @@ export class MemberCacheManager {
 		this.lastUpdated = new Date();
 	}
 	private async initialize() {
-		const job = schedule.scheduleJob('0 0 * * *', async () => {
+		const job = schedule.scheduleJob('0 0 * * * *', async () => {
 			this.cachedMembersList = await this.memberSheetHelper.getMemberList();
 			this.cachedTopSellers = await this.memberSheetHelper.getTopSellers();
 			this.lastUpdated = new Date();
