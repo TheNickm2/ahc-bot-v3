@@ -106,7 +106,7 @@ export function MemberStatusEmbed(member: AhfGuildMemberSheetData) {
 	const vinnyRaffleKey = Object.keys(member).find((key) => key.startsWith('Vinny Raffle Tickets')) || 'Vinny Raffle Tickets';
 	const bonusRaffleKey = Object.keys(member).find((key) => key.startsWith('Vinny Bonus Tickets')) || 'Vinny Bonus Tickets';
 
-	const a = new EmbedBuilder()
+	return new EmbedBuilder()
 		.setTitle('Your AHC Status')
 		.setAuthor({
 			name: 'AHF Info Center',
@@ -148,6 +148,4 @@ export function MemberStatusEmbed(member: AhfGuildMemberSheetData) {
 			},
 		])
 		.setThumbnail(Constants.AHC_BANNER_IMAGE);
-	console.log(a.toJSON());
-	return a;
 }
