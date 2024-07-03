@@ -38,6 +38,8 @@ export class UserCommand extends Command {
 					new ButtonBuilder().setCustomId(Constants.BUTTON_IDS.REFRESH_SHEETS).setLabel('Refetch Sheet Data').setStyle(ButtonStyle.Danger),
 				),
 			);
+		} else {
+			console.log(interaction.member?.permissions);
 		}
 		return interaction.editReply({
 			content: `**WebSocket Latency**: ${latency !== -1 ? `${latency}ms` : 'Not Yet Computed'}\n**API Latency**: ${apiLatency}ms\n**Google Sheets Cache Updated:**: <t:${Math.round(cacheUpdated.getTime() / 1000)}:f>`,
