@@ -22,5 +22,6 @@ export const Constants = {
 		CHECK_STATUS: 'check-status',
 		SERVER_BOOSTERS: 'server-boosters',
 		REROLL_DICE: 'reroll-dice',
+		REFRESH_SHEETS: 'refresh-sheets',
 	},
 };

@@ -8,6 +8,7 @@ export class MemberCacheManager {
 	private cachedMembersList: Collection<string, AhfGuildMemberSheetData> | undefined;
 	private cachedTopSellers: Collection<string, number> | undefined;
 	private isInitialized = false;
+	private cronJob: schedule.Job | null = null;
 	public lastUpdated: Date;
 
 	constructor() {
@@ -22,6 +23,7 @@ export class MemberCacheManager {
 			this.lastUpdated = new Date();
 		});
 		job.invoke();
+		this.cronJob = job;
 		this.isInitialized = true;
 	}
 	public async getMemberList() {
@@ -35,5 +37,11 @@ export class MemberCacheManager {
 			await this.initialize();
 		}
 		return this.cachedTopSellers;
+	}
+	public async refreshCache() {
+		if (!this.isInitialized) {
+			await this.initialize();
+		}
+		return this.cronJob?.invoke();
 	}
 }
