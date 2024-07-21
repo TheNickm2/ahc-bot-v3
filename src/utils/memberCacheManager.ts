@@ -18,6 +18,8 @@ export class MemberCacheManager {
   }
   private async initialize() {
     const job = schedule.scheduleJob('0 0 * * * *', async () => {
+      this.cachedMembersList?.clear();
+      this.cachedTopSellers?.clear();
       this.cachedMembersList = await this.memberSheetHelper.getMemberList();
       this.cachedTopSellers = await this.memberSheetHelper.getTopSellers();
       this.lastUpdated = new Date();
