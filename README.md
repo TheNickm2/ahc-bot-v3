@@ -12,7 +12,7 @@ npm install
 
 ### Development
 
-This command will run `tsc-watch` to watch the files and automatically restart your bot.
+This command will run `tsup --watch --onSuccess \"node ./dist/index.js\"` to watch the files and automatically restart your bot.
 
 ```sh
 npm run dev
