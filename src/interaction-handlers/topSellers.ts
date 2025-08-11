@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import type { ButtonInteraction } from 'discord.js';
+import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 import { MemberCacheManagerInstance } from '../state/state';
 import { TopSellersEmbed } from '../utils/embedUtil';
@@ -10,7 +10,7 @@ import { TopSellersEmbed } from '../utils/embedUtil';
 })
 export class ButtonHandler extends InteractionHandler {
   public async run(interaction: ButtonInteraction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
     const topSellers = await MemberCacheManagerInstance.getTopSellers();
     if (!topSellers || topSellers.size === 0) {
       return interaction.editReply({

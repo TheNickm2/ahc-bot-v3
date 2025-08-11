@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import type { ButtonInteraction } from 'discord.js';
+import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { MemberCacheManagerInstance } from '../state/state';
 import { Constants } from '../config/constants';
 import { Stopwatch } from '@sapphire/stopwatch';
@@ -11,7 +11,7 @@ import { Stopwatch } from '@sapphire/stopwatch';
 export class ButtonHandler extends InteractionHandler {
   public async run(interaction: ButtonInteraction) {
     await interaction.deferReply({
-      ephemeral: true,
+      flags: [MessageFlags.Ephemeral],
     });
     const stopwatch = new Stopwatch();
     await MemberCacheManagerInstance.refreshCache();

@@ -3,7 +3,7 @@ import { Command } from '@sapphire/framework';
 import { Constants } from '../config/constants';
 import Sugar from 'sugar';
 import { AuctionEndDates } from '../state/state';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 
 @ApplyOptions<Command.Options>({
   description: 'Officers Only - Post the Discord Auction',
@@ -33,8 +33,8 @@ export class UserCommand extends Command {
     const endDate = Sugar.Date.create(endDateString);
     if (!endDateString || !Sugar.Date.isFuture(endDate)) {
       return interaction.reply({
-        ephemeral: true,
         content: 'A valid date in the future must be provided. Please try again.',
+        flags: [MessageFlags.Ephemeral],
       });
     }
     AuctionEndDates.set(interaction.id, endDate);
@@ -42,9 +42,9 @@ export class UserCommand extends Command {
       new ButtonBuilder().setCustomId(Constants.BUTTON_IDS.START_AUCTION).setLabel('Start').setStyle(ButtonStyle.Success),
     );
     return interaction.reply({
-      ephemeral: true,
       content: `Auction end date set to <t:${Math.round(endDate.getTime() / 1000)}:F>. If this is correct, use the button below to post the auction. If not, use the command again to set a new date.`,
       components: [actionRow],
+      flags: [MessageFlags.Ephemeral],
     });
   }
 }

@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import { Collection, ThreadAutoArchiveDuration, type ButtonInteraction } from 'discord.js';
+import { Collection, MessageFlags, ThreadAutoArchiveDuration, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 import { AuctionEndDates } from '../state/state';
 import Sugar from 'sugar';
@@ -22,7 +22,7 @@ export class ButtonHandler extends InteractionHandler {
     if (!previousInteractionId) {
       interaction.client.logger.error('Previous Interaction ID not found. Start Auction interaction failed.');
       return interaction.reply({
-        ephemeral: true,
+        flags: [MessageFlags.Ephemeral],
         content: 'An error has occurred. Please try again. If the issue persists, contact Nick. Error: Previous Interaction ID not found.',
       });
     }
@@ -30,18 +30,18 @@ export class ButtonHandler extends InteractionHandler {
     if (!endDate) {
       interaction.client.logger.error('End date not found. Start Auction interaction failed.');
       return interaction.reply({
-        ephemeral: true,
+        flags: [MessageFlags.Ephemeral],
         content: 'An error has occurred. Please try again. If the issue persists, contact Nick. Error: End date not found.',
       });
     }
     if (!Sugar.Date.isFuture(endDate)) {
       interaction.client.logger.error('End date is not in the future. Start Auction interaction failed.');
       return interaction.reply({
-        ephemeral: true,
+        flags: [MessageFlags.Ephemeral],
         content: 'A valid date in the future must be provided. Please try again.',
       });
     }
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
     const auctionLotHelper = new AuctionLotHelper();
     const auctionLots = await auctionLotHelper.getAuctionLots();
     if (!auctionLots || !auctionLots.length) {
@@ -70,7 +70,7 @@ export class ButtonHandler extends InteractionHandler {
     });
     await interaction.deleteReply();
     return await interaction.followUp({
-      ephemeral: true,
+      flags: [MessageFlags.Ephemeral],
       content: `Auction lots posted successfully ${Constants.EMOTES.CHECK}\nThe timestamp helper below may be used to format your announcement message!`,
       embeds: [TimestampHelperEmbed(endDate)],
     });

@@ -3,6 +3,7 @@ import { Command } from '@sapphire/framework';
 import { Constants } from '../config/constants';
 import Sugar from 'sugar';
 import { TimestampHelperEmbed } from '../utils/embedUtil';
+import { MessageFlags } from 'discord.js';
 
 @ApplyOptions<Command.Options>({
   description: 'Get Discord timestamp formats for a given date/time! Must use EASTERN TIME.',
@@ -33,9 +34,9 @@ export class UserCommand extends Command {
     }
     const embed = TimestampHelperEmbed(date);
     return interaction.reply({
-      ephemeral: true,
       content: parseFailed ? '## Failed to parse date. Using current date/time instead.' : undefined,
       embeds: [embed],
+      flags: [MessageFlags.Ephemeral],
     });
   }
 }

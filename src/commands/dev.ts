@@ -3,7 +3,7 @@ import { Command } from '@sapphire/framework';
 import { MemberCacheManagerInstance } from '../state/state';
 import { Constants } from '../config/constants';
 import type { GuildMember } from 'discord.js';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, PermissionFlagsBits } from 'discord.js';
 
 @ApplyOptions<Command.Options>({
   description: 'Info for development purposes',
@@ -25,7 +25,7 @@ export class UserCommand extends Command {
     const responseMessage = await interaction.reply({
       content: 'Pinging API...',
       fetchReply: true,
-      ephemeral: true,
+      flags: [MessageFlags.Ephemeral],
     });
     const latency = interaction.client.ws.ping;
     const apiLatency = responseMessage.createdTimestamp - interaction.createdTimestamp;

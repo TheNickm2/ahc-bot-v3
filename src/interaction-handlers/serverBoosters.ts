@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import type { ButtonInteraction } from 'discord.js';
+import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -9,7 +9,7 @@ import { Constants } from '../config/constants';
 export class ButtonHandler extends InteractionHandler {
   public async run(interaction: ButtonInteraction) {
     if (!interaction.inGuild) return;
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
     const guild = interaction.guild;
     await guild?.members.fetch();
     await guild?.roles.fetch();

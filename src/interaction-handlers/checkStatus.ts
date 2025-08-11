@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import type { ButtonInteraction, GuildMember } from 'discord.js';
+import { MessageFlags, type ButtonInteraction, type GuildMember } from 'discord.js';
 import { Constants } from '../config/constants';
 import { MemberCacheManagerInstance } from '../state/state';
 import { MemberStatusEmbed } from '../utils/embedUtil';
@@ -11,7 +11,7 @@ import { MemberStatusEmbed } from '../utils/embedUtil';
 export class ButtonHandler extends InteractionHandler {
   public async run(interaction: ButtonInteraction) {
     if (!interaction.inGuild) return;
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
     const discordMember = interaction.member as GuildMember;
     const memberName = discordMember.nickname || discordMember.displayName || discordMember.user.username;
     const memberList = await MemberCacheManagerInstance.getMemberList();
