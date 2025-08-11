@@ -24,11 +24,11 @@ export class UserCommand extends Command {
   public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
     const responseMessage = await interaction.reply({
       content: 'Pinging API...',
-      fetchReply: true,
       flags: [MessageFlags.Ephemeral],
+      withResponse: true,
     });
     const latency = interaction.client.ws.ping;
-    const apiLatency = responseMessage.createdTimestamp - interaction.createdTimestamp;
+    const apiLatency = responseMessage.interaction.createdTimestamp - interaction.createdTimestamp;
     const cacheUpdated = MemberCacheManagerInstance.lastUpdated;
     const isMod = interaction.inGuild() && (interaction.member as GuildMember).permissions.has(PermissionFlagsBits.KickMembers);
     const messageComponents: ActionRowBuilder<ButtonBuilder>[] = [];
