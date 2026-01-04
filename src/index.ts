@@ -25,6 +25,7 @@ const main = async () => {
     // Initialize the member cache manager
     MemberCacheManagerInstance.getMemberList();
     MemberCacheManagerInstance.getTopSellers();
+    // Login to Discord
     client.logger.info('Logging in');
     await client.login();
     client.logger.info('logged in');
