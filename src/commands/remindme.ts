@@ -1,7 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { MessageFlags, TextDisplayBuilder } from 'discord.js';
-import Sugar from 'sugar';
+import * as chrono from 'chrono-node';
+import { getTimezoneOffsetMinutes } from '../utils/getTimezoneOffset';
 
 @ApplyOptions<Command.Options>({
   description: 'A basic slash command',
@@ -65,18 +66,10 @@ export class UserCommand extends Command {
       });
     }
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-    const tzOffset = new Intl.DateTimeFormat('en-US', {
-      timeZone: reminderTimezone,
-      timeZoneName: 'shortOffset',
-    })
-      .formatToParts(new Date())
-      .find((p) => p.type === 'timeZoneName')!
-      .value.replace('GMT', '')
-      .replace(/^([+-])(\d)$/, '$10$2:00')
-      .replace(/^([+-]\d{2})$/, '$1:00');
-    interaction.client.logger.debug(`Parsed timezone offset for ${reminderTimezone} as ${tzOffset} from Intl.DateTimeFormat.`);
-    const parsedDate = Sugar.Date.create(`${reminderTime} ${tzOffset}`);
-    if (!parsedDate || !Sugar.Date.isValid(parsedDate) || !Sugar.Date.isFuture(parsedDate)) {
+    const tzOffsetMinutes = getTimezoneOffsetMinutes(reminderTimezone);
+    interaction.client.logger.debug(`Parsed timezone offset for ${reminderTimezone} as ${tzOffsetMinutes} minutes from UTC.`);
+    const parsedDate = chrono.parseDate(reminderTime, { instant: new Date(), timezone: tzOffsetMinutes });
+    if (!parsedDate || parsedDate <= new Date()) {
       return interaction.editReply({
         components: [
           new TextDisplayBuilder().setContent(

@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { Constants } from '../config/constants';
-import Sugar from 'sugar';
+import * as chrono from 'chrono-node';
 import { TimestampHelperEmbed } from '../utils/embedUtil';
 import { MessageFlags } from 'discord.js';
 
@@ -26,12 +26,9 @@ export class UserCommand extends Command {
 
   public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
     const input = interaction.options.getString('input', true);
-    let date = Sugar.Date.create(input);
-    let parseFailed = false;
-    if (!Sugar.Date.isValid(date)) {
-      parseFailed = true;
-      date = new Date();
-    }
+    const parsed = chrono.parseDate(input);
+    const parseFailed = parsed === null;
+    const date = parsed ?? new Date();
     const embed = TimestampHelperEmbed(date);
     return interaction.reply({
       content: parseFailed ? '## Failed to parse date. Using current date/time instead.' : undefined,

@@ -3,7 +3,6 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { Collection, MessageFlags, ThreadAutoArchiveDuration, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 import { AuctionEndDates } from '../state/state';
-import Sugar from 'sugar';
 import { AuctionLotHelper } from '../utils/auctionLotHelper';
 import { AuctionLotEmbed, AuctionSummaryEmbed, TimestampHelperEmbed } from '../utils/embedUtil';
 import type { AuctionLot } from '../types/auction';
@@ -34,7 +33,7 @@ export class ButtonHandler extends InteractionHandler {
         content: 'An error has occurred. Please try again. If the issue persists, contact Nick. Error: End date not found.',
       });
     }
-    if (!Sugar.Date.isFuture(endDate)) {
+    if (endDate <= new Date()) {
       interaction.client.logger.error('End date is not in the future. Start Auction interaction failed.');
       return interaction.reply({
         flags: [MessageFlags.Ephemeral],

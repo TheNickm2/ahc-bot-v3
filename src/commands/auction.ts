@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { Constants } from '../config/constants';
-import Sugar from 'sugar';
+import * as chrono from 'chrono-node';
 import { AuctionEndDates } from '../state/state';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 
@@ -30,8 +30,8 @@ export class UserCommand extends Command {
   public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
     if (!interaction.inGuild()) return;
     const endDateString = interaction.options.getString('end', true);
-    const endDate = Sugar.Date.create(endDateString);
-    if (!endDateString || !Sugar.Date.isFuture(endDate)) {
+    const endDate = chrono.parseDate(endDateString);
+    if (!endDate || endDate <= new Date()) {
       return interaction.reply({
         content: 'A valid date in the future must be provided. Please try again.',
         flags: [MessageFlags.Ephemeral],
