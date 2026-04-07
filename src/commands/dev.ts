@@ -40,7 +40,7 @@ export class UserCommand extends Command {
       );
     }
     return interaction.editReply({
-      content: `**WebSocket Latency**: ${latency !== -1 ? `${latency}ms` : 'Not Yet Computed'}\n**API Latency**: ${apiLatency}ms\n**Google Sheets Cache Updated:**: <t:${Math.round(cacheUpdated.getTime() / 1000)}:f>`,
+      content: `**WebSocket Latency**: ${latency !== -1 ? `${latency}ms` : 'Not Yet Computed'}\n**API Latency**: ${apiLatency}ms\n**Google Sheets Cache Updated:** <t:${Math.round(cacheUpdated.getTime() / 1000)}:f>`,
       components: messageComponents,
     });
   }
