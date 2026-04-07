@@ -1,6 +1,7 @@
 import nodeSchedule from 'node-schedule';
 import { Database } from '../state/state';
 import { container } from '@sapphire/framework';
+import { sendReminder } from './reminderSendUtil';
 
 export class ReminderScheduleManager {
   constructor() {
@@ -15,12 +16,26 @@ export class ReminderScheduleManager {
         return;
       }
       nodeSchedule.scheduleJob(`reminder-${reminder.id}`, new Date(reminder.remind_at * 1000), async () => {
-        // TODO: implement reminder sending utility / async handle discord stuff
-        // assuming the discord portion was successful, delete the reminder from the database
-        Database.deleteReminder(reminder.id);
-        container.logger.debug(`Executed scheduled reminder with ID ${reminder.id}. Reminder removed from database.`);
+        await this.executeReminder(reminder.id);
       });
     });
+  }
+
+  private async executeReminder(reminderId: number): Promise<void> {
+    const reminder = Database.getReminder(reminderId);
+    if (!reminder) {
+      container.logger.warn(`[ReminderScheduler] Tried to execute reminder ${reminderId}, but it no longer exists in the database.`);
+      return;
+    }
+    const delivered = await sendReminder(reminder);
+    if (delivered) {
+      Database.deleteReminder(reminderId);
+      container.logger.debug(`Executed scheduled reminder with ID ${reminderId}. Reminder removed from database.`);
+    } else {
+      container.logger.error(
+        `[ReminderScheduler] Failed to deliver reminder ${reminderId}. It will NOT be removed from the database and will be cleaned up on next bot restart.`,
+      );
+    }
   }
 
   public scheduleReminder(reminderId: number /* from database */) {
@@ -28,10 +43,7 @@ export class ReminderScheduleManager {
     const existingJob = nodeSchedule.scheduledJobs[`reminder-${reminderId}`];
     if (reminder && !existingJob) {
       const scheduledJob = nodeSchedule.scheduleJob(`reminder-${reminderId}`, new Date(reminder.remind_at * 1000), async () => {
-        // TODO: implement reminder sending utility / async handle discord stuff
-        // assuming the discord portion was successful, delete the reminder from the database
-        Database.deleteReminder(reminderId);
-        container.logger.debug(`Executed scheduled reminder with ID ${reminder.id}. Reminder removed from database.`);
+        await this.executeReminder(reminderId);
       });
       return scheduledJob;
     } else if (existingJob) return existingJob;

@@ -1,6 +1,7 @@
 import type { AuctionLot } from '../types/auction';
 import type { APIEmbedField, Collection, GuildTextBasedChannel } from 'discord.js';
 import type { AhfGuildMemberSheetData } from '../types/ahfGuildMemberSheetData';
+import type { ReminderRow } from '../types/database';
 import { EmbedBuilder } from '@discordjs/builders';
 import { Constants } from '../config/constants';
 
@@ -148,4 +149,14 @@ export function MemberStatusEmbed(member: AhfGuildMemberSheetData) {
       },
     ])
     .setThumbnail(Constants.AHC_BANNER_IMAGE);
+}
+
+export function ReminderEmbed(reminder: ReminderRow) {
+  const createdAt = new Date(reminder.created_at * 1000);
+  const formattedDate = createdAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  return new EmbedBuilder()
+    .setTitle('⏰ Reminder')
+    .setDescription(reminder.message)
+    .setColor(Constants.EMBED_COLOR)
+    .setFooter({ text: `Reminder set on ${formattedDate}` });
 }
