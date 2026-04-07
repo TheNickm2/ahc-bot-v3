@@ -4,6 +4,7 @@ import { Constants } from '../config/constants';
 import * as chrono from 'chrono-node';
 import { AuctionEndDates } from '../state/state';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
+import { getTimezoneOffsetMinutes, getTimezoneStringOption } from '../utils/timezoneUtils';
 
 @ApplyOptions<Command.Options>({
   description: 'Officers Only - Post the Discord Auction',
@@ -16,11 +17,9 @@ export class UserCommand extends Command {
           .setName(this.name)
           .setDescription(this.description)
           .addStringOption((option) =>
-            option
-              .setName('end')
-              .setRequired(true)
-              .setDescription('The end of the auction - i.e. "Next Thursday at 8PM" - All times must be in Eastern Time'),
-          ),
+            option.setName('end').setRequired(true).setDescription('The end of the auction - i.e. "Next Thursday at 8PM" - Default TZ US Eastern'),
+          )
+          .addStringOption(getTimezoneStringOption()),
       {
         guildIds: Constants.DEFAULT_GUILD_IDS,
       },
@@ -30,7 +29,9 @@ export class UserCommand extends Command {
   public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
     if (!interaction.inGuild()) return;
     const endDateString = interaction.options.getString('end', true);
-    const endDate = chrono.parseDate(endDateString);
+    const endDateTimezone = interaction.options.getString('timezone') || 'America/New_York';
+    const tzOffsetMinutes = getTimezoneOffsetMinutes(endDateTimezone);
+    const endDate = chrono.parseDate(endDateString, { instant: new Date(), timezone: tzOffsetMinutes });
     if (!endDate || endDate <= new Date()) {
       return interaction.reply({
         content: 'A valid date in the future must be provided. Please try again.',

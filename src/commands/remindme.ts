@@ -2,7 +2,8 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { MessageFlags, TextDisplayBuilder } from 'discord.js';
 import * as chrono from 'chrono-node';
-import { getTimezoneOffsetMinutes } from '../utils/getTimezoneOffset';
+import { getTimezoneOffsetMinutes, getTimezoneStringOption } from '../utils/timezoneUtils';
+import { Database, ReminderScheduler } from '../state/state';
 
 @ApplyOptions<Command.Options>({
   description: 'A basic slash command',
@@ -17,41 +18,7 @@ export class UserCommand extends Command {
         .addStringOption((option) =>
           option.setName('time').setDescription('When to remind you (e.g. in 4 hours, on Friday at 8pm, or 2026-01-01 4:00 PM').setRequired(true),
         )
-        .addStringOption((option) =>
-          option
-            .setName('timezone')
-            .setDescription('Time zone to interpret the reminder time in - defaults to US Eastern if not provided')
-            .addChoices(
-              // Americas (11)
-              { name: 'US Eastern — New York, Miami (default)', value: 'America/New_York' },
-              { name: 'US Central — Chicago, Dallas', value: 'America/Chicago' },
-              { name: 'US Mountain — Denver, Salt Lake City', value: 'America/Denver' },
-              { name: 'US Pacific — Los Angeles, Seattle', value: 'America/Los_Angeles' },
-              { name: 'US Arizona — Phoenix (no DST)', value: 'America/Phoenix' },
-              { name: 'US Alaska — Anchorage', value: 'America/Anchorage' },
-              { name: 'US Hawaii — Honolulu', value: 'Pacific/Honolulu' },
-              { name: 'Canada Atlantic — Halifax, Nova Scotia', value: 'America/Halifax' },
-              { name: 'Mexico / Central America — Mexico City', value: 'America/Mexico_City' },
-              { name: 'Brazil — São Paulo', value: 'America/Sao_Paulo' },
-              { name: 'Argentina — Buenos Aires', value: 'America/Argentina/Buenos_Aires' },
-              // Europe / UTC (6)
-              { name: 'UTC — Universal Coordinated Time', value: 'Etc/UTC' },
-              { name: 'UK & Ireland — London, Dublin', value: 'Europe/London' },
-              { name: 'Central Europe — Paris, Berlin, Rome, Madrid', value: 'Europe/Paris' },
-              { name: 'Eastern Europe — Helsinki, Athens, Bucharest', value: 'Europe/Helsinki' },
-              { name: 'Russia — Moscow', value: 'Europe/Moscow' },
-              { name: 'Turkey — Istanbul', value: 'Europe/Istanbul' },
-              // Asia / Pacific (8)
-              { name: 'Gulf — Dubai, Abu Dhabi, Riyadh', value: 'Asia/Dubai' },
-              { name: 'India — Mumbai, New Delhi', value: 'Asia/Kolkata' },
-              { name: 'Southeast Asia — Bangkok, Hanoi, Jakarta', value: 'Asia/Bangkok' },
-              { name: 'Singapore / Malaysia — Singapore, Kuala Lumpur', value: 'Asia/Singapore' },
-              { name: 'China — Shanghai, Beijing', value: 'Asia/Shanghai' },
-              { name: 'Japan — Tokyo', value: 'Asia/Tokyo' },
-              { name: 'South Korea — Seoul', value: 'Asia/Seoul' },
-              { name: 'Australia Eastern — Sydney, Melbourne', value: 'Australia/Sydney' },
-            ),
-        ),
+        .addStringOption(getTimezoneStringOption()),
     );
   }
 
@@ -59,12 +26,6 @@ export class UserCommand extends Command {
     const reminderMessage = interaction.options.getString('message', true).trim();
     const reminderTime = interaction.options.getString('time', true).trim();
     const reminderTimezone = interaction.options.getString('timezone') || 'America/New_York';
-    if (!reminderMessage || !reminderTime) {
-      return interaction.reply({
-        components: [new TextDisplayBuilder().setContent('Please provide a reminder message and a date/time for the reminder.')],
-        flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-      });
-    }
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
     const tzOffsetMinutes = getTimezoneOffsetMinutes(reminderTimezone);
     interaction.client.logger.debug(`Parsed timezone offset for ${reminderTimezone} as ${tzOffsetMinutes} minutes from UTC.`);
@@ -79,6 +40,21 @@ export class UserCommand extends Command {
         flags: [MessageFlags.IsComponentsV2],
       });
     }
-    // TODO: validate date input, schedule reminder and save to db, then reply with confirmation message
+    const remindAt = Math.floor(parsedDate.getTime() / 1000);
+    const result = Database.insertReminder({
+      user_id: interaction.user.id,
+      channel_id: interaction.channelId,
+      message: reminderMessage,
+      remind_at: remindAt,
+    });
+    const newReminderId = Number(result.lastInsertRowid);
+    ReminderScheduler.scheduleReminder(newReminderId);
+    interaction.client.logger.debug(`Scheduled reminder with ID ${newReminderId} for <@${interaction.user.id}> at <t:${remindAt}:F>.`);
+    return interaction.editReply({
+      components: [
+        new TextDisplayBuilder().setContent(`Got it! I'll remind you <t:${remindAt}:R> (on <t:${remindAt}:f>).\n\n**Reminder:** ${reminderMessage}`),
+      ],
+      flags: [MessageFlags.IsComponentsV2],
+    });
   }
 }
