@@ -3,7 +3,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 import { MemberCacheManagerInstance } from '../state/state';
-import { TopSellersEmbed } from '../utils/embedUtil';
+import { TopSellersMessageComponents } from '../utils/messageComponentUtil';
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
@@ -17,10 +17,10 @@ export class ButtonHandler extends InteractionHandler {
         content: 'An error occurred while fetching the top sellers list. Please try again later, or notify an Officer if the issue persists!',
       });
     }
-    const embed = TopSellersEmbed(topSellers);
     await interaction.deleteReply();
     return await interaction.followUp({
-      embeds: [embed],
+      flags: [MessageFlags.IsComponentsV2],
+      components: [TopSellersMessageComponents(topSellers)],
     });
   }
 

@@ -13,8 +13,10 @@ export const Constants = {
   },
   EMBED_COLOR: 0xb072ff,
   EMBED_AUTHOR_ICON: 'https://media.discordapp.net/attachments/925942369965191208/983420398232289370/Animated_Logo_500x500_px_30.gif',
-  TOP_SELLER_THUMBNAIL: 'https://media.discordapp.net/attachments/944039646000721921/1252452760331489360/vinnygoldtwinkle.gif',
-  AHC_BANNER_IMAGE: 'https://media.discordapp.net/attachments/1053151598504837122/1251746344574521384/nicornbannerribbons.png',
+  TOP_SELLER_THUMBNAIL:
+    'https://media.discordapp.net/attachments/1365581139389186108/1365582188686606406/vinnygoldtwinkle.gif?ex=69d6a4c5&is=69d55345&hm=b4831015da49dc8e873fd3263d2b12e838c7e6a3f16db2ba44b33050d6f3fa75&=&width=1046&height=1046',
+  AHC_BANNER_IMAGE:
+    'https://cdn.discordapp.com/attachments/1362282420598083625/1362282680648994977/nicornbannerribbons.png?ex=69d72a1d&is=69d5d89d&hm=b4b081ca70b574c373b419bff4d0dd64167f20e57acbbaedcb11e48f08dc2c22&',
   INFO_CENTER_LINK: 'https://ahf.gg/',
   BUTTON_IDS: {
     START_AUCTION: 'start-auction',

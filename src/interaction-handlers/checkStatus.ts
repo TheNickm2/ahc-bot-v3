@@ -3,7 +3,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, type ButtonInteraction, type GuildMember } from 'discord.js';
 import { Constants } from '../config/constants';
 import { MemberCacheManagerInstance } from '../state/state';
-import { MemberStatusEmbed } from '../utils/embedUtil';
+import { MemberStatusMessageComponents } from '../utils/messageComponentUtil';
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
@@ -21,9 +21,9 @@ export class ButtonHandler extends InteractionHandler {
         content: `Sorry, I couldn't find a member with the name ${memberName}. Please try again.`,
       });
     }
-    const embed = MemberStatusEmbed(member);
     return await interaction.editReply({
-      embeds: [embed],
+      flags: [MessageFlags.IsComponentsV2],
+      components: [MemberStatusMessageComponents(member)],
     });
   }
 

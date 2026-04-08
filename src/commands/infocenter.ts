@@ -1,8 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import { Constants } from '../config/constants';
-import { InfoCenterEmbed } from '../utils/embedUtil';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
+import { InfoCenterMessageComponents } from '../utils/messageComponentUtil';
 
 @ApplyOptions<Command.Options>({
   description: 'View data from the AHC Info Center within Discord!',
@@ -39,9 +39,8 @@ export class UserCommand extends Command {
         .setEmoji(Constants.EMOTES.SERVER_BOOST),
     );
     await interaction.reply({
-      flags: [MessageFlags.Ephemeral],
-      components: [buttonRow],
-      embeds: [InfoCenterEmbed()],
+      flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
+      components: [InfoCenterMessageComponents(), buttonRow],
     });
   }
 }
