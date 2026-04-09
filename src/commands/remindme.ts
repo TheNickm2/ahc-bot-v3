@@ -6,7 +6,9 @@ import { getTimezoneOffsetMinutes, getTimezoneStringOption } from '../utils/time
 import { Database, ReminderScheduler } from '../state/state';
 
 @ApplyOptions<Command.Options>({
-  description: 'A basic slash command',
+  description:
+    'Set a reminder for yourself. You can specify the time in a natural language format (e.g. "in 4 hours", "on Friday at 8pm", or "2026-01-01 4:00 PM") and an optional timezone (default is US Eastern).',
+  enabled: false,
 })
 export class UserCommand extends Command {
   public override registerApplicationCommands(registry: Command.Registry) {
