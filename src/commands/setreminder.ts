@@ -5,6 +5,7 @@ import { ApplicationCommandType } from 'discord.js';
 @ApplyOptions<Command.Options>({
   name: 'setreminder',
   description: 'A basic contextMenu command',
+  enabled: false,
 })
 export class UserCommand extends Command {
   public override registerApplicationCommands(registry: Command.Registry) {
