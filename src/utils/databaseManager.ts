@@ -4,7 +4,7 @@ import type { AuctionInsert, AuctionRow, ReminderInsert, ReminderRow } from '../
 
 export class DatabaseManager {
   private db: Database.Database;
-  private stmts = {
+  private statements = {
     insertAuction: null as Database.Statement<AuctionInsert> | null,
     getAuction: null as Database.Statement<[string]> | null,
     deleteAuction: null as Database.Statement<[string]> | null,
@@ -24,56 +24,58 @@ export class DatabaseManager {
   }
 
   private prepareStatements() {
-    this.stmts.insertAuction = this.db.prepare<AuctionInsert>('INSERT INTO auctions (id, end_time, channel_id) VALUES (@id, @end_time, @channel_id)');
-    this.stmts.getAuction = this.db.prepare<[string]>('SELECT * FROM auctions WHERE id = ?');
-    this.stmts.deleteAuction = this.db.prepare<[string]>('DELETE FROM auctions WHERE id = ?');
-    this.stmts.insertReminder = this.db.prepare<[string, string, string, number, string | null]>(
+    this.statements.insertAuction = this.db.prepare<AuctionInsert>(
+      'INSERT INTO auctions (id, end_time, channel_id) VALUES (@id, @end_time, @channel_id)',
+    );
+    this.statements.getAuction = this.db.prepare<[string]>('SELECT * FROM auctions WHERE id = ?');
+    this.statements.deleteAuction = this.db.prepare<[string]>('DELETE FROM auctions WHERE id = ?');
+    this.statements.insertReminder = this.db.prepare<[string, string, string, number, string | null]>(
       'INSERT INTO reminders (user_id, channel_id, message, remind_at, auction_id) VALUES (?, ?, ?, ?, ?)',
     );
-    this.stmts.getReminder = this.db.prepare<[number]>('SELECT * FROM reminders WHERE id = ?');
-    this.stmts.getUserReminders = this.db.prepare<[string]>('SELECT * FROM reminders WHERE user_id = ? ORDER BY remind_at ASC');
-    this.stmts.deleteReminder = this.db.prepare<[number]>('DELETE FROM reminders WHERE id = ?');
-    this.stmts.getAllPendingReminders = this.db.prepare<[number]>('SELECT * FROM reminders WHERE remind_at > ? ORDER BY remind_at ASC');
+    this.statements.getReminder = this.db.prepare<[number]>('SELECT * FROM reminders WHERE id = ?');
+    this.statements.getUserReminders = this.db.prepare<[string]>('SELECT * FROM reminders WHERE user_id = ? ORDER BY remind_at ASC');
+    this.statements.deleteReminder = this.db.prepare<[number]>('DELETE FROM reminders WHERE id = ?');
+    this.statements.getAllPendingReminders = this.db.prepare<[number]>('SELECT * FROM reminders WHERE remind_at > ? ORDER BY remind_at ASC');
   }
 
   // Auction methods
   public insertAuction(data: AuctionInsert): void {
-    this.stmts.insertAuction!.run(data);
+    this.statements.insertAuction!.run(data);
   }
 
   public getAuction(id: string): AuctionRow | undefined {
-    return this.stmts.getAuction!.get(id) as AuctionRow | undefined;
+    return this.statements.getAuction!.get(id) as AuctionRow | undefined;
   }
 
   public deleteAuction(id: string): void {
-    this.stmts.deleteAuction!.run(id);
+    this.statements.deleteAuction!.run(id);
   }
 
   // Reminder methods
   public insertReminder(data: ReminderInsert): Database.RunResult {
-    return this.stmts.insertReminder!.run(data.user_id, data.channel_id, data.message, data.remind_at, data.auction_id ?? null);
+    return this.statements.insertReminder!.run(data.user_id, data.channel_id, data.message, data.remind_at, data.auction_id ?? null);
   }
 
   public getReminder(id: number): ReminderRow | undefined {
-    return this.stmts.getReminder!.get(id) as ReminderRow | undefined;
+    return this.statements.getReminder!.get(id) as ReminderRow | undefined;
   }
 
   public getUserReminders(userId: string): ReminderRow[] {
-    return this.stmts.getUserReminders!.all(userId) as ReminderRow[];
+    return this.statements.getUserReminders!.all(userId) as ReminderRow[];
   }
 
   public deleteReminder(id: number): void {
-    this.stmts.deleteReminder!.run(id);
+    this.statements.deleteReminder!.run(id);
   }
 
   public getAllPendingReminders(): ReminderRow[] {
     const now = Math.floor(Date.now() / 1000);
-    return this.stmts.getAllPendingReminders!.all(now) as ReminderRow[];
+    return this.statements.getAllPendingReminders!.all(now) as ReminderRow[];
   }
 
   public getAuctionReminders(auctionId: string): ReminderRow[] {
-    const stmt = this.db.prepare<[string]>('SELECT * FROM reminders WHERE auction_id = ? ORDER BY remind_at ASC');
-    return stmt.all(auctionId) as ReminderRow[];
+    const statement = this.db.prepare<[string]>('SELECT * FROM reminders WHERE auction_id = ? ORDER BY remind_at ASC');
+    return statement.all(auctionId) as ReminderRow[];
   }
 
   public deletePastReminders(): void {
