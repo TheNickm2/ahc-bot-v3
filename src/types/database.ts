@@ -75,3 +75,9 @@ export interface LotWinnerRow extends AuctionLotRow {
   winner_user_id: string | null;
   winning_amount: number | null;
 }
+
+export interface OutbidSubscriptionRow {
+  id: number;
+  auction_id: string;
+  user_id: string;
+}

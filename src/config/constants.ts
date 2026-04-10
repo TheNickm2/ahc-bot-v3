@@ -31,5 +31,7 @@ export const Constants = {
     BID_CANCEL: 'bid-cancel',
     AUCTION_REMIND: 'auction-remind',
     AUCTION_REMIND_TOGGLE: 'auction-remind-toggle',
+    OUTBID_NOTIFY: 'outbid-notify',
+    OUTBID_NOTIFY_TOGGLE: 'outbid-notify-toggle',
   },
 };

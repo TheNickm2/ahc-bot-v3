@@ -69,6 +69,10 @@ export function AuctionSummaryMessageComponents({ auctionLots, endDate, channel,
           .setCustomId(`${Constants.BUTTON_IDS.AUCTION_REMIND}:${auctionId}`)
           .setLabel('🔔 Remind Me')
           .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId(`${Constants.BUTTON_IDS.OUTBID_NOTIFY}:${auctionId}`)
+          .setLabel('🔕 Outbid Alerts')
+          .setStyle(ButtonStyle.Secondary),
       ),
     );
   }
@@ -277,5 +281,45 @@ export function WinnerDMMessageComponents(wonLots: LotWinnerRow[]) {
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) =>
       text.setContent(`You won the following lot(s):\n\n${lotsList}\n\nPlease contact an officer to arrange payment and delivery.`),
+    );
+}
+
+export interface OutbidNotifyComponentsProps {
+  auctionId: string;
+  isSubscribed: boolean;
+}
+export function OutbidNotifyComponents({ auctionId, isSubscribed }: OutbidNotifyComponentsProps) {
+  return new ContainerBuilder()
+    .addTextDisplayComponents((text) =>
+      text.setContent(
+        `### 🔕 Outbid Alerts\nIf you're the leading bidder on a lot and someone outbids you, you'll receive a DM with a link directly to the lot.\n\nCurrent status: **${isSubscribed ? 'Enabled ✅' : 'Disabled'}**`,
+      ),
+    )
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addActionRowComponents((row) =>
+      row.addComponents(
+        new ButtonBuilder()
+          .setCustomId(`${Constants.BUTTON_IDS.OUTBID_NOTIFY_TOGGLE}:${auctionId}`)
+          .setLabel(isSubscribed ? '✅ Alerts On — Click to Disable' : 'Alerts Off — Click to Enable')
+          .setStyle(isSubscribed ? ButtonStyle.Success : ButtonStyle.Secondary),
+      ),
+    );
+}
+
+export interface OutbidDMComponentsProps {
+  lot: AuctionLotRow;
+  newAmount: number;
+  guildId: string;
+}
+export function OutbidDMComponents({ lot, newAmount, guildId }: OutbidDMComponentsProps) {
+  const lotUrl = `https://discord.com/channels/${guildId}/${lot.channel_id}/${lot.message_id}`;
+  return new ContainerBuilder()
+    .setAccentColor(Constants.EMBED_COLOR)
+    .addTextDisplayComponents((text) => text.setContent(`### 🔔 You've been outbid!`))
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addTextDisplayComponents((text) =>
+      text.setContent(
+        `You were outbid on **Lot ${lot.lot_number}: ${lot.title}**!\nNew top bid: ${Constants.EMOTES.COIN} **${newAmount.toLocaleString('en-us')}** — [Jump to lot →](${lotUrl})\n\nPlace a new bid before the auction ends!`,
+      ),
     );
 }

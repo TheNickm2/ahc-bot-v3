@@ -3,7 +3,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 import { Database } from '../state/state';
-import { AuctionLotWithBidComponents } from '../utils/messageComponentUtil';
+import { AuctionLotWithBidComponents, OutbidDMComponents } from '../utils/messageComponentUtil';
 
 type ParseResult = { action: 'confirm'; lotId: number; amount: number } | { action: 'cancel' };
 
@@ -63,6 +63,21 @@ export class ButtonHandler extends InteractionHandler {
       }
     } catch (err) {
       interaction.client.logger.error(`customBidConfirm: failed to edit lot message for lot ${lotId}:`, err);
+    }
+
+    // Notify the previous top bidder if they have outbid alerts enabled
+    if (topBid && topBid.user_id && topBid.user_id !== interaction.user.id) {
+      if (Database.getOutbidSubscription(lot.auction_id, topBid.user_id)) {
+        try {
+          const previousBidder = await interaction.client.users.fetch(topBid.user_id);
+          await previousBidder.send({
+            components: [OutbidDMComponents({ lot, newAmount: amount, guildId: interaction.guildId! })],
+            flags: [MessageFlags.IsComponentsV2],
+          });
+        } catch (err) {
+          interaction.client.logger.error(`customBidConfirm: failed to send outbid DM to ${topBid.user_id}:`, err);
+        }
+      }
     }
 
     return interaction.editReply({ content: `Bid of **${amount.toLocaleString('en-us')}g** placed! ✅`, components: [] });

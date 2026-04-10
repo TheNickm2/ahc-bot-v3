@@ -45,3 +45,13 @@ CREATE TABLE IF NOT EXISTS bids (
 
 CREATE INDEX IF NOT EXISTS idx_auction_lots_auction ON auction_lots(auction_id);
 CREATE INDEX IF NOT EXISTS idx_bids_lot ON bids(lot_id);
+
+CREATE TABLE IF NOT EXISTS outbid_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  auction_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  UNIQUE(auction_id, user_id),
+  FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_outbid_subs_auction ON outbid_subscriptions(auction_id);

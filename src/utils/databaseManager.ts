@@ -8,6 +8,7 @@ import type {
   BidInsert,
   BidRow,
   LotWinnerRow,
+  OutbidSubscriptionRow,
   ReminderInsert,
   ReminderRow,
 } from '../types/database';
@@ -30,6 +31,9 @@ export class DatabaseManager {
     insertBid: null as Database.Statement<[number, string, number]> | null,
     getTopBid: null as Database.Statement<[number]> | null,
     getActiveAuction: null as Database.Statement | null,
+    getOutbidSubscription: null as Database.Statement<[string, string]> | null,
+    insertOutbidSubscription: null as Database.Statement<[string, string]> | null,
+    deleteOutbidSubscription: null as Database.Statement<[string, string]> | null,
   };
 
   constructor() {
@@ -73,6 +77,15 @@ export class DatabaseManager {
     this.statements.insertBid = this.db.prepare<[number, string, number]>('INSERT INTO bids (lot_id, user_id, amount) VALUES (?, ?, ?)');
     this.statements.getTopBid = this.db.prepare<[number]>('SELECT * FROM bids WHERE lot_id = ? ORDER BY amount DESC LIMIT 1');
     this.statements.getActiveAuction = this.db.prepare("SELECT * FROM auctions WHERE end_time > strftime('%s', 'now') LIMIT 1");
+    this.statements.getOutbidSubscription = this.db.prepare<[string, string]>(
+      'SELECT * FROM outbid_subscriptions WHERE auction_id = ? AND user_id = ?',
+    );
+    this.statements.insertOutbidSubscription = this.db.prepare<[string, string]>(
+      'INSERT OR IGNORE INTO outbid_subscriptions (auction_id, user_id) VALUES (?, ?)',
+    );
+    this.statements.deleteOutbidSubscription = this.db.prepare<[string, string]>(
+      'DELETE FROM outbid_subscriptions WHERE auction_id = ? AND user_id = ?',
+    );
   }
 
   // Auction methods
@@ -172,6 +185,19 @@ export class DatabaseManager {
       ORDER BY al.lot_number ASC
     `);
     return statement.all(auctionId) as LotWinnerRow[];
+  }
+
+  // Outbid subscription methods
+  public getOutbidSubscription(auctionId: string, userId: string): OutbidSubscriptionRow | undefined {
+    return this.statements.getOutbidSubscription!.get(auctionId, userId) as OutbidSubscriptionRow | undefined;
+  }
+
+  public insertOutbidSubscription(auctionId: string, userId: string): void {
+    this.statements.insertOutbidSubscription!.run(auctionId, userId);
+  }
+
+  public deleteOutbidSubscription(auctionId: string, userId: string): void {
+    this.statements.deleteOutbidSubscription!.run(auctionId, userId);
   }
 
   public getAuctionReminderForUser(auctionId: string, userId: string, offsetSeconds: number): ReminderRow | undefined {
