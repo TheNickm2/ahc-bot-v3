@@ -3,7 +3,7 @@ import { ButtonBuilder, ButtonStyle, ContainerBuilder, SeparatorSpacingSize } fr
 import type { AuctionLot } from '../types/auction';
 import { Constants } from '../config/constants';
 import type { AhfGuildMemberSheetData } from '../types/ahfGuildMemberSheetData';
-import type { AuctionLotRow, BidRow, ReminderRow } from '../types/database';
+import type { AuctionLotRow, BidRow, LotWinnerRow, ReminderRow } from '../types/database';
 
 export interface AuctionLotMessageComponentsProps {
   lotInfo: AuctionLot;
@@ -236,5 +236,42 @@ export function AuctionReminderOptInComponents({ auctionId, auctionEndTime, stat
           .setStyle(states.min ? ButtonStyle.Success : ButtonStyle.Secondary)
           .setDisabled(minDisabled),
       ),
+    );
+}
+
+export function AuctionLotEndedComponents({ lot }: { lot: LotWinnerRow }) {
+  const resultText =
+    lot.winner_user_id && lot.winning_amount != null
+      ? `**Winner:** <@${lot.winner_user_id}> | **Winning Bid:** ${Constants.EMOTES.COIN} ${lot.winning_amount.toLocaleString('en-us')}`
+      : '**No winner — no bids were placed**';
+  const container = new ContainerBuilder()
+    .setAccentColor(Constants.EMBED_COLOR)
+    .addTextDisplayComponents((text) => text.setContent(`### Lot ${lot.lot_number}: ${lot.title} — ENDED`))
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addTextDisplayComponents((text) => text.setContent(lot.description ?? ''))
+    .addSeparatorComponents((separator) => separator.setDivider(false).setSpacing(SeparatorSpacingSize.Small))
+    .addTextDisplayComponents((text) => text.setContent(resultText))
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Large));
+  if (lot.image) {
+    container.addMediaGalleryComponents((gallery) =>
+      gallery.addItems((item) => item.setURL(lot.image!).setDescription(`Image for Lot ${lot.lot_number} - ${lot.title}`)),
+    );
+  }
+  return container;
+}
+
+export function WinnerDMMessageComponents(wonLots: LotWinnerRow[]) {
+  const lotsList = wonLots
+    .map(
+      (lot) =>
+        `${Constants.EMOTES.LIST_ITEM} **Lot ${lot.lot_number}: ${lot.title}** — ${Constants.EMOTES.COIN} ${lot.winning_amount!.toLocaleString('en-us')}`,
+    )
+    .join('\n');
+  return new ContainerBuilder()
+    .setAccentColor(Constants.EMBED_COLOR)
+    .addTextDisplayComponents((text) => text.setContent(`### 🎉 You won an auction lot!`))
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addTextDisplayComponents((text) =>
+      text.setContent(`You won the following lot(s):\n\n${lotsList}\n\nPlease contact an officer to arrange payment and delivery.`),
     );
 }

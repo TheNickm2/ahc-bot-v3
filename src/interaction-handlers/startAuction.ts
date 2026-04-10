@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { Collection, MessageFlags, TextDisplayBuilder, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
-import { AuctionEndDates, Database } from '../state/state';
+import { AuctionEndDates, AuctionEndScheduler, Database, ReminderScheduler } from '../state/state';
 import { AuctionLotHelper } from '../utils/auctionLotHelper';
 import type { AuctionLot } from '../types/auction';
 import { AuctionLotMessageComponents, AuctionSummaryMessageComponents, TimestampHelperMessageComponents } from '../utils/messageComponentUtil';
@@ -46,7 +46,11 @@ export class ButtonHandler extends InteractionHandler {
     // This handles the case where an officer deletes lot messages and re-runs the command to fix a typo.
     const existingAuction = Database.getActiveAuction();
     if (existingAuction) {
-      // TODO Phase 5: AuctionEndScheduler.cancelAuctionEnd(existingAuction.id)
+      AuctionEndScheduler.cancelAuctionEnd(existingAuction.id);
+      const existingReminders = Database.getAuctionReminders(existingAuction.id);
+      for (const reminder of existingReminders) {
+        ReminderScheduler.cancelReminder(reminder.id);
+      }
       Database.deleteAuction(existingAuction.id);
     }
 
@@ -102,7 +106,7 @@ export class ButtonHandler extends InteractionHandler {
       flags: [MessageFlags.IsComponentsV2],
     });
 
-    // TODO Phase 5: AuctionEndScheduler.scheduleAuctionEnd(auctionId, endDate, isTest)
+    AuctionEndScheduler.scheduleAuctionEnd(auctionId, endDate, isTest);
 
     await interaction.deleteReply();
     const summaryComponent = new TextDisplayBuilder().setContent(
