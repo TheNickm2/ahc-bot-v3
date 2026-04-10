@@ -24,10 +24,21 @@ export class ButtonHandler extends InteractionHandler {
 
     const isSubscribed = !!Database.getOutbidSubscription(auctionId, interaction.user.id);
 
-    return interaction.editReply({
-      flags: [MessageFlags.IsComponentsV2],
-      components: [OutbidNotifyComponents({ auctionId, isSubscribed })],
-    });
+    const dmComponents = OutbidNotifyComponents({ auctionId, isSubscribed });
+
+    try {
+      await interaction.user.send({
+        components: [dmComponents],
+        flags: [MessageFlags.IsComponentsV2],
+      });
+      return interaction.editReply({ content: 'Check your DMs! You can toggle outbid alerts from there. 📬' });
+    } catch {
+      // DMs are closed — fall back to ephemeral
+      return interaction.editReply({
+        flags: [MessageFlags.IsComponentsV2],
+        components: [dmComponents],
+      });
+    }
   }
 
   public override parse(interaction: ButtonInteraction) {
