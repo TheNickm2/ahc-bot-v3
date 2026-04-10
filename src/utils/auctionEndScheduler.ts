@@ -14,7 +14,7 @@ export class AuctionEndScheduler {
       const endDate = new Date(activeAuction.end_time * 1000);
       if (endDate > new Date()) {
         this.scheduleAuctionEnd(activeAuction.id, endDate, activeAuction.is_test === 1);
-        container.logger.info(`[AuctionEndScheduler] Rehydrated end job for auction ${activeAuction.id}.`);
+        console.log(`[AuctionEndScheduler] Rehydrated end job for auction ${activeAuction.id}.`);
       }
     }
   }

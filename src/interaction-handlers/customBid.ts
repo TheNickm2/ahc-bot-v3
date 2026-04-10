@@ -30,12 +30,7 @@ export class ButtonHandler extends InteractionHandler {
         new LabelBuilder()
           .setLabel(`Minimum bid: ${minBid.toLocaleString('en-us')}g`)
           .setTextInputComponent(
-            new TextInputBuilder()
-              .setCustomId('bid_amount')
-              .setLabel('Your bid amount')
-              .setPlaceholder('e.g. 50000 or 50k')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true),
+            new TextInputBuilder().setCustomId('bid_amount').setPlaceholder('e.g. 50000 or 50k').setStyle(TextInputStyle.Short).setRequired(true),
           ),
       );
 

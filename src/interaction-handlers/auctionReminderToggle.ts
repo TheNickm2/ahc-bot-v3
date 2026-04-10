@@ -34,11 +34,10 @@ export class ButtonHandler extends InteractionHandler {
         ReminderScheduler.cancelReminder(existing.id);
       } else {
         // Toggle on: insert and schedule a new reminder
-        const offsetLabel = offsetSeconds === 86400 ? '24 hours' : offsetSeconds === 3600 ? '1 hour' : '15 minutes';
         const result = Database.insertReminder({
           user_id: userId,
           channel_id: auction.channel_id,
-          message: `⏰ An auction you are watching is ending in ${offsetLabel}!`,
+          message: `⏰ An auction you are watching is ending <t:${auction.end_time}:R>! Head over to <#${auction.channel_id}> to place your bids.`,
           remind_at: remindAt,
           auction_id: auctionId,
         });
