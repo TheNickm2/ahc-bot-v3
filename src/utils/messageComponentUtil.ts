@@ -1,5 +1,5 @@
 import type { Collection, GuildTextBasedChannel } from 'discord.js';
-import { ContainerBuilder, SeparatorSpacingSize } from 'discord.js';
+import { ButtonBuilder, ButtonStyle, ContainerBuilder, SeparatorSpacingSize } from 'discord.js';
 import type { AuctionLot } from '../types/auction';
 import { Constants } from '../config/constants';
 import type { AhfGuildMemberSheetData } from '../types/ahfGuildMemberSheetData';
@@ -8,12 +8,13 @@ import type { ReminderRow } from '../types/database';
 export interface AuctionLotMessageComponentsProps {
   lotInfo: AuctionLot;
   lotNumber: number;
+  lotId?: number;
 }
-export function AuctionLotMessageComponents({ lotInfo, lotNumber }: AuctionLotMessageComponentsProps) {
+export function AuctionLotMessageComponents({ lotInfo, lotNumber, lotId }: AuctionLotMessageComponentsProps) {
   if (!lotInfo || !lotNumber) {
     throw new Error('Missing required props for AuctionLotMessageComponents');
   }
-  return new ContainerBuilder()
+  const container = new ContainerBuilder()
     .setAccentColor(Constants.EMBED_COLOR)
     .addTextDisplayComponents((text) => text.setContent(`### Lot ${lotNumber}: ${lotInfo.title}`))
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
@@ -24,21 +25,32 @@ export function AuctionLotMessageComponents({ lotInfo, lotNumber }: AuctionLotMe
     .addMediaGalleryComponents((gallery) =>
       gallery.addItems((item) => item.setURL(lotInfo.image || '').setDescription(`Image for Lot ${lotNumber} - ${lotInfo.title}`)),
     );
+  if (lotId !== undefined) {
+    container.addActionRowComponents((row) =>
+      row.addComponents(
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}`).setLabel('+100k Bid').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_CUSTOM}:${lotId}`).setLabel('Custom Bid').setStyle(ButtonStyle.Primary),
+      ),
+    );
+  }
+  return container;
 }
 
 export interface AuctionSummaryMessageComponentsProps {
   auctionLots: Array<AuctionLot & { messageId: string }>;
   endDate: Date;
   channel: GuildTextBasedChannel;
+  auctionId: string;
+  isTest: boolean;
 }
-export function AuctionSummaryMessageComponents({ auctionLots, endDate, channel }: AuctionSummaryMessageComponentsProps) {
+export function AuctionSummaryMessageComponents({ auctionLots, endDate, channel, auctionId, isTest }: AuctionSummaryMessageComponentsProps) {
   const auctionList = auctionLots
     .map(
       (lot, index) =>
         `**Lot ${index + 1} | ${lot.title}**\n[Jump to lot →](https://discord.com/channels/${channel.guild.id}/${channel.id}/${lot.messageId ?? ''})${index < auctionLots.length - 1 ? '\n' : ''}`,
     )
     .join('');
-  return new ContainerBuilder()
+  const container = new ContainerBuilder()
     .addTextDisplayComponents((text) => text.setContent(`### Auction Summary ${Constants.EMOTES.COIN}`))
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) =>
@@ -48,6 +60,17 @@ export function AuctionSummaryMessageComponents({ auctionLots, endDate, channel 
     )
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Large))
     .addTextDisplayComponents((text) => text.setContent(`**Auction Posted <t:${Math.round(Date.now() / 1000)}:R>**`));
+  if (!isTest) {
+    container.addActionRowComponents((row) =>
+      row.addComponents(
+        new ButtonBuilder()
+          .setCustomId(`${Constants.BUTTON_IDS.AUCTION_REMIND}:${auctionId}`)
+          .setLabel('🔔 Remind Me')
+          .setStyle(ButtonStyle.Secondary),
+      ),
+    );
+  }
+  return container;
 }
 
 export function TimestampHelperMessageComponents(date: Date) {

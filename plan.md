@@ -32,7 +32,12 @@ Button-based bidding replacing threads, live message updates per bid, an auction
 *Depends on Phase 1*
 
 
-5\. Call `Database.insertAuction({ id: interaction.message.interaction.id, end_time, channel_id })` — ⚠️ this method exists but is **never currently called**; this is the first call
+5\. **Before inserting a new auction, clean up any existing active one** (edge case: officer deletes lot messages and re-runs the command to fix a typo):
+\* Add `getActiveAuction(): AuctionRow | undefined` to `DatabaseManager` — `SELECT * FROM auctions WHERE end_time > strftime('%s', 'now') LIMIT 1`
+\* At the top of `run()`, call `Database.getActiveAuction()`
+\* If a row is returned: call `AuctionEndScheduler.cancelAuctionEnd(existingId)` (cancels the node-schedule job) then `Database.deleteAuction(existingId)` (cascades to `auction_lots`, `bids`, and `reminders` via FK)
+\* This ensures at most one active auction exists in the DB at any time, matching real usage
+5a\. Call `Database.insertAuction({ id: interaction.message.interaction.id, end_time, channel_id })` — ⚠️ this method exists but is **never currently called**; this is the first call
 6\. For each posted lot message:
 \* `Database.insertAuctionLot(...)` → get `lotId` from `lastInsertRowid`
 \* `Database.updateAuctionLotMessageId(lotId, message.id)`

@@ -29,6 +29,7 @@ export class DatabaseManager {
     getAuctionLots: null as Database.Statement<[string]> | null,
     insertBid: null as Database.Statement<[number, string, number]> | null,
     getTopBid: null as Database.Statement<[number]> | null,
+    getActiveAuction: null as Database.Statement | null,
   };
 
   constructor() {
@@ -36,12 +37,17 @@ export class DatabaseManager {
     const initSql = fs.readFileSync(`${process.cwd()}/src/db/schema.sql`, 'utf-8');
     db.exec(initSql);
     this.db = db;
+    try {
+      this.db.exec('ALTER TABLE auctions ADD COLUMN is_test INTEGER DEFAULT 0');
+    } catch {
+      // Column already exists on databases created before this migration
+    }
     this.prepareStatements();
   }
 
   private prepareStatements() {
     this.statements.insertAuction = this.db.prepare<AuctionInsert>(
-      'INSERT INTO auctions (id, end_time, channel_id) VALUES (@id, @end_time, @channel_id)',
+      'INSERT INTO auctions (id, end_time, channel_id, is_test) VALUES (@id, @end_time, @channel_id, @is_test)',
     );
     this.statements.getAuction = this.db.prepare<[string]>('SELECT * FROM auctions WHERE id = ?');
     this.statements.deleteAuction = this.db.prepare<[string]>('DELETE FROM auctions WHERE id = ?');
@@ -60,6 +66,7 @@ export class DatabaseManager {
     this.statements.getAuctionLots = this.db.prepare<[string]>('SELECT * FROM auction_lots WHERE auction_id = ? ORDER BY lot_number ASC');
     this.statements.insertBid = this.db.prepare<[number, string, number]>('INSERT INTO bids (lot_id, user_id, amount) VALUES (?, ?, ?)');
     this.statements.getTopBid = this.db.prepare<[number]>('SELECT * FROM bids WHERE lot_id = ? ORDER BY amount DESC LIMIT 1');
+    this.statements.getActiveAuction = this.db.prepare("SELECT * FROM auctions WHERE end_time > strftime('%s', 'now') LIMIT 1");
   }
 
   // Auction methods
@@ -109,6 +116,10 @@ export class DatabaseManager {
 
   public getDatabase(): Database.Database {
     return this.db;
+  }
+
+  public getActiveAuction(): AuctionRow | undefined {
+    return this.statements.getActiveAuction!.get() as AuctionRow | undefined;
   }
 
   // Auction lot methods

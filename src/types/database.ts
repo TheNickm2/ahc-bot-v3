@@ -3,6 +3,7 @@ export interface AuctionRow {
   id: string;
   end_time: number;
   channel_id: string;
+  is_test: number;
   created_at: number;
 }
 
@@ -21,6 +22,7 @@ export interface AuctionInsert {
   id: string;
   end_time: number;
   channel_id: string;
+  is_test: number;
 }
 
 export interface ReminderInsert {

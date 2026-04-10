@@ -25,5 +25,11 @@ export const Constants = {
     SERVER_BOOSTERS: 'server-boosters',
     REROLL_DICE: 'reroll-dice',
     REFRESH_SHEETS: 'refresh-sheets',
+    BID_QUICK: 'bid-quick',
+    BID_CUSTOM: 'bid-custom',
+    BID_CONFIRM: 'bid-confirm',
+    BID_CANCEL: 'bid-cancel',
+    AUCTION_REMIND: 'auction-remind',
+    AUCTION_REMIND_TOGGLE: 'auction-remind-toggle',
   },
 };
