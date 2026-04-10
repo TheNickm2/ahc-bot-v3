@@ -217,7 +217,9 @@ export function AuctionReminderOptInComponents({ auctionId, auctionEndTime, stat
   const minDisabled = auctionEndTime - 900 <= now;
   return new ContainerBuilder()
     .addTextDisplayComponents((text) =>
-      text.setContent(`### 🔔 Auction Reminders\nToggle reminders below. You'll receive a DM before the auction ends.`),
+      text.setContent(
+        `### 🔔 Auction Reminders\nThis auction ends <t:${auctionEndTime}:F> (<t:${auctionEndTime}:R>).\nToggle reminders below. You'll receive a DM before the auction ends.`,
+      ),
     )
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     .addActionRowComponents((row) =>
