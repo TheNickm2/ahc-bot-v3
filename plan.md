@@ -1,9 +1,10 @@
 ## Plan: Full Auction Bidding & Lifecycle Overhaul
 
-Button-based bidding replacing threads, live message updates per bid, an auction-end scheduler that auto-closes lots and DMs winners, and "Remind Me" opt-in toggle reminders — all backed by SQLite with race-safe transactions and persisted across restarts.
+Button-based bidding replacing threads, live message updates per bid, an auction-end scheduler that auto-closes lots and DMs winners, and "Remind Me" opt-in toggle reminders — all backed by SQLite with race-safe transactions and persisted across restarts. When developing this functionality, keep in mind that most users are likely to skim over text or blatanly ignore reading, so we should try to make this as simple for the users as possible while achieving all the included goals.
 
 
 ### Phase 1: Database Schema Expansion
+
 
 
 
@@ -172,6 +173,7 @@ Button-based bidding replacing threads, live message updates per bid, an auction
 
 
 **Verification**
+
 
 
 
