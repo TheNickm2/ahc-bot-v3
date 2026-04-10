@@ -21,10 +21,12 @@ export function AuctionLotMessageComponents({ lotInfo, lotNumber, lotId }: Aucti
     .addTextDisplayComponents((text) => text.setContent(lotInfo.description))
     .addSeparatorComponents((separator) => separator.setDivider(false).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) => text.setContent(`**Starting Bid**\n${Constants.EMOTES.COIN} ${lotInfo.startingBid.toLocaleString('en-us')}`))
-    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Large))
-    .addMediaGalleryComponents((gallery) =>
-      gallery.addItems((item) => item.setURL(lotInfo.image || '').setDescription(`Image for Lot ${lotNumber} - ${lotInfo.title}`)),
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Large));
+  if (lotInfo.image) {
+    container.addMediaGalleryComponents((gallery) =>
+      gallery.addItems((item) => item.setURL(lotInfo.image!).setDescription(`Image for Lot ${lotNumber} - ${lotInfo.title}`)),
     );
+  }
   if (lotId !== undefined) {
     container.addActionRowComponents((row) =>
       row.addComponents(

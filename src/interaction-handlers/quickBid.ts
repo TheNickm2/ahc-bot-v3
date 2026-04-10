@@ -28,7 +28,7 @@ export class ButtonHandler extends InteractionHandler {
     }
 
     const topBid = Database.getTopBid(lotId);
-    const newAmount = (topBid?.amount ?? lot.starting_bid! - 1000) + 100000;
+    const newAmount = (topBid?.amount ?? lot.starting_bid!) + 100000;
 
     const result = Database.insertBid({ lot_id: lotId, user_id: interaction.user.id, amount: newAmount });
     if (!result) {
