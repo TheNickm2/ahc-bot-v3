@@ -1,6 +1,16 @@
 import Database from 'better-sqlite3';
 import fs from 'fs';
-import type { AuctionInsert, AuctionRow, ReminderInsert, ReminderRow } from '../types/database';
+import type {
+  AuctionInsert,
+  AuctionLotInsert,
+  AuctionLotRow,
+  AuctionRow,
+  BidInsert,
+  BidRow,
+  LotWinnerRow,
+  ReminderInsert,
+  ReminderRow,
+} from '../types/database';
 
 export class DatabaseManager {
   private db: Database.Database;
@@ -13,6 +23,12 @@ export class DatabaseManager {
     getUserReminders: null as Database.Statement<[string]> | null,
     deleteReminder: null as Database.Statement<[number]> | null,
     getAllPendingReminders: null as Database.Statement<[number]> | null,
+    insertAuctionLot: null as Database.Statement<AuctionLotInsert> | null,
+    updateAuctionLotMessageId: null as Database.Statement<[string, number]> | null,
+    getAuctionLot: null as Database.Statement<[number]> | null,
+    getAuctionLots: null as Database.Statement<[string]> | null,
+    insertBid: null as Database.Statement<[number, string, number]> | null,
+    getTopBid: null as Database.Statement<[number]> | null,
   };
 
   constructor() {
@@ -36,6 +52,14 @@ export class DatabaseManager {
     this.statements.getUserReminders = this.db.prepare<[string]>('SELECT * FROM reminders WHERE user_id = ? ORDER BY remind_at ASC');
     this.statements.deleteReminder = this.db.prepare<[number]>('DELETE FROM reminders WHERE id = ?');
     this.statements.getAllPendingReminders = this.db.prepare<[number]>('SELECT * FROM reminders WHERE remind_at > ? ORDER BY remind_at ASC');
+    this.statements.insertAuctionLot = this.db.prepare<AuctionLotInsert>(
+      'INSERT INTO auction_lots (auction_id, message_id, channel_id, lot_number, title, starting_bid) VALUES (@auction_id, @message_id, @channel_id, @lot_number, @title, @starting_bid)',
+    );
+    this.statements.updateAuctionLotMessageId = this.db.prepare<[string, number]>('UPDATE auction_lots SET message_id = ? WHERE id = ?');
+    this.statements.getAuctionLot = this.db.prepare<[number]>('SELECT * FROM auction_lots WHERE id = ?');
+    this.statements.getAuctionLots = this.db.prepare<[string]>('SELECT * FROM auction_lots WHERE auction_id = ? ORDER BY lot_number ASC');
+    this.statements.insertBid = this.db.prepare<[number, string, number]>('INSERT INTO bids (lot_id, user_id, amount) VALUES (?, ?, ?)');
+    this.statements.getTopBid = this.db.prepare<[number]>('SELECT * FROM bids WHERE lot_id = ? ORDER BY amount DESC LIMIT 1');
   }
 
   // Auction methods
@@ -85,5 +109,61 @@ export class DatabaseManager {
 
   public getDatabase(): Database.Database {
     return this.db;
+  }
+
+  // Auction lot methods
+  public insertAuctionLot(data: AuctionLotInsert): number {
+    const result = this.statements.insertAuctionLot!.run(data);
+    return Number(result.lastInsertRowid);
+  }
+
+  public updateAuctionLotMessageId(lotId: number, messageId: string): void {
+    this.statements.updateAuctionLotMessageId!.run(messageId, lotId);
+  }
+
+  public getAuctionLot(id: number): AuctionLotRow | undefined {
+    return this.statements.getAuctionLot!.get(id) as AuctionLotRow | undefined;
+  }
+
+  public getAuctionLots(auctionId: string): AuctionLotRow[] {
+    return this.statements.getAuctionLots!.all(auctionId) as AuctionLotRow[];
+  }
+
+  // Bid methods
+  public insertBid(data: BidInsert): Database.RunResult | null {
+    return this.db.transaction(() => {
+      const currentTop = this.getTopBid(data.lot_id);
+      if (currentTop && data.amount <= currentTop.amount!) {
+        return null;
+      }
+      return this.statements.insertBid!.run(data.lot_id, data.user_id, data.amount);
+    })();
+  }
+
+  public getTopBid(lotId: number): BidRow | undefined {
+    return this.statements.getTopBid!.get(lotId) as BidRow | undefined;
+  }
+
+  public getWinnersForAuction(auctionId: string): LotWinnerRow[] {
+    const statement = this.db.prepare<[string]>(`
+      SELECT al.*, b.user_id AS winner_user_id, b.amount AS winning_amount
+      FROM auction_lots al
+      LEFT JOIN bids b ON b.id = (
+        SELECT id FROM bids WHERE lot_id = al.id ORDER BY amount DESC LIMIT 1
+      )
+      WHERE al.auction_id = ?
+      ORDER BY al.lot_number ASC
+    `);
+    return statement.all(auctionId) as LotWinnerRow[];
+  }
+
+  public getAuctionReminderForUser(auctionId: string, userId: string, offsetSeconds: number): ReminderRow | undefined {
+    const statement = this.db.prepare<[string, string, number]>(`
+      SELECT r.*
+      FROM reminders r
+      JOIN auctions a ON a.id = r.auction_id
+      WHERE r.auction_id = ? AND r.user_id = ? AND r.remind_at = a.end_time - ?
+    `);
+    return statement.get(auctionId, userId, offsetSeconds) as ReminderRow | undefined;
   }
 }

@@ -19,3 +19,26 @@ CREATE TABLE IF NOT EXISTS reminders (
 CREATE INDEX IF NOT EXISTS idx_reminders_user ON reminders(user_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_time ON reminders(remind_at);
 CREATE INDEX IF NOT EXISTS idx_auctions_end ON auctions(end_time);
+
+CREATE TABLE IF NOT EXISTS auction_lots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  auction_id TEXT NOT NULL,
+  message_id TEXT,
+  channel_id TEXT,
+  lot_number INTEGER,
+  title TEXT,
+  starting_bid INTEGER,
+  FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bids (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  lot_id INTEGER NOT NULL,
+  user_id TEXT,
+  amount INTEGER,
+  created_at INTEGER DEFAULT (strftime('%s', 'now')),
+  FOREIGN KEY (lot_id) REFERENCES auction_lots(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_auction_lots_auction ON auction_lots(auction_id);
+CREATE INDEX IF NOT EXISTS idx_bids_lot ON bids(lot_id);
