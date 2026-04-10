@@ -198,3 +198,43 @@ export function BidConfirmationComponents({ lotId, parsedAmount, lotTitle }: Bid
       ),
     );
 }
+
+export interface AuctionReminderOptInComponentsProps {
+  auctionId: string;
+  auctionEndTime: number;
+  states: {
+    day: boolean;
+    hour: boolean;
+    min: boolean;
+  };
+}
+export function AuctionReminderOptInComponents({ auctionId, auctionEndTime, states }: AuctionReminderOptInComponentsProps) {
+  const now = Math.floor(Date.now() / 1000);
+  const dayDisabled = auctionEndTime - 86400 <= now;
+  const hourDisabled = auctionEndTime - 3600 <= now;
+  const minDisabled = auctionEndTime - 900 <= now;
+  return new ContainerBuilder()
+    .addTextDisplayComponents((text) =>
+      text.setContent(`### 🔔 Auction Reminders\nToggle reminders below. You'll receive a DM before the auction ends.`),
+    )
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addActionRowComponents((row) =>
+      row.addComponents(
+        new ButtonBuilder()
+          .setCustomId(`${Constants.BUTTON_IDS.AUCTION_REMIND_TOGGLE}:${auctionId}:86400`)
+          .setLabel(states.day ? '✅ 24h Before' : '24h Before')
+          .setStyle(states.day ? ButtonStyle.Success : ButtonStyle.Secondary)
+          .setDisabled(dayDisabled),
+        new ButtonBuilder()
+          .setCustomId(`${Constants.BUTTON_IDS.AUCTION_REMIND_TOGGLE}:${auctionId}:3600`)
+          .setLabel(states.hour ? '✅ 1h Before' : '1h Before')
+          .setStyle(states.hour ? ButtonStyle.Success : ButtonStyle.Secondary)
+          .setDisabled(hourDisabled),
+        new ButtonBuilder()
+          .setCustomId(`${Constants.BUTTON_IDS.AUCTION_REMIND_TOGGLE}:${auctionId}:900`)
+          .setLabel(states.min ? '✅ 15min Before' : '15min Before')
+          .setStyle(states.min ? ButtonStyle.Success : ButtonStyle.Secondary)
+          .setDisabled(minDisabled),
+      ),
+    );
+}
