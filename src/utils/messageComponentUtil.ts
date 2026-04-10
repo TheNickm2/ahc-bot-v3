@@ -3,7 +3,7 @@ import { ButtonBuilder, ButtonStyle, ContainerBuilder, SeparatorSpacingSize } fr
 import type { AuctionLot } from '../types/auction';
 import { Constants } from '../config/constants';
 import type { AhfGuildMemberSheetData } from '../types/ahfGuildMemberSheetData';
-import type { ReminderRow } from '../types/database';
+import type { AuctionLotRow, BidRow, ReminderRow } from '../types/database';
 
 export interface AuctionLotMessageComponentsProps {
   lotInfo: AuctionLot;
@@ -143,4 +143,58 @@ export function ReminderMessageComponents(reminder: ReminderRow) {
     .addTextDisplayComponents((text) => text.setContent(reminder.message))
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) => text.setContent(`**Created At**: ${formattedDate}`));
+}
+
+export interface AuctionLotWithBidComponentsProps {
+  lot: AuctionLotRow;
+  lotNumber: number;
+  topBid?: BidRow;
+}
+export function AuctionLotWithBidComponents({ lot, lotNumber, topBid }: AuctionLotWithBidComponentsProps) {
+  const bidStatusText = topBid
+    ? `**Current Bid:** ${Constants.EMOTES.COIN} ${topBid.amount!.toLocaleString('en-us')} by <@${topBid.user_id}>`
+    : `**Starting Bid:** ${Constants.EMOTES.COIN} ${lot.starting_bid!.toLocaleString('en-us')} — No bids yet`;
+  const container = new ContainerBuilder()
+    .setAccentColor(Constants.EMBED_COLOR)
+    .addTextDisplayComponents((text) => text.setContent(`### Lot ${lotNumber}: ${lot.title}`))
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addTextDisplayComponents((text) => text.setContent(lot.description ?? ''))
+    .addSeparatorComponents((separator) => separator.setDivider(false).setSpacing(SeparatorSpacingSize.Small))
+    .addTextDisplayComponents((text) => text.setContent(bidStatusText))
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Large));
+  if (lot.image) {
+    container.addMediaGalleryComponents((gallery) =>
+      gallery.addItems((item) => item.setURL(lot.image!).setDescription(`Image for Lot ${lotNumber} - ${lot.title}`)),
+    );
+  }
+  container.addActionRowComponents((row) =>
+    row.addComponents(
+      new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lot.id}`).setLabel('+100k Bid').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_CUSTOM}:${lot.id}`).setLabel('Custom Bid').setStyle(ButtonStyle.Primary),
+    ),
+  );
+  return container;
+}
+
+export interface BidConfirmationComponentsProps {
+  lotId: number;
+  parsedAmount: number;
+  lotTitle: string;
+}
+export function BidConfirmationComponents({ lotId, parsedAmount, lotTitle }: BidConfirmationComponentsProps) {
+  return new ContainerBuilder()
+    .addTextDisplayComponents((text) =>
+      text.setContent(
+        `I parsed your bid as **${parsedAmount.toLocaleString('en-us')}g** for **${lotTitle}**.\nThis is final and cannot be reversed.`,
+      ),
+    )
+    .addActionRowComponents((row) =>
+      row.addComponents(
+        new ButtonBuilder()
+          .setCustomId(`${Constants.BUTTON_IDS.BID_CONFIRM}:${lotId}:${parsedAmount}`)
+          .setLabel('✅ Confirm Bid')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId(Constants.BUTTON_IDS.BID_CANCEL).setLabel('❌ Cancel').setStyle(ButtonStyle.Danger),
+      ),
+    );
 }

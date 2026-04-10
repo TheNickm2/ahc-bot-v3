@@ -41,6 +41,8 @@ export interface AuctionLotRow {
   channel_id: string | null;
   lot_number: number | null;
   title: string | null;
+  description: string | null;
+  image: string | null;
   starting_bid: number | null;
 }
 
@@ -50,6 +52,8 @@ export interface AuctionLotInsert {
   channel_id: string | null;
   lot_number: number | null;
   title: string | null;
+  description: string | null;
+  image: string | null;
   starting_bid: number | null;
 }
 

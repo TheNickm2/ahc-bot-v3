@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS auction_lots (
   channel_id TEXT,
   lot_number INTEGER,
   title TEXT,
+  description TEXT,
+  image TEXT,
   starting_bid INTEGER,
   FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE
 );

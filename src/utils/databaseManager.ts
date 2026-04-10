@@ -42,6 +42,12 @@ export class DatabaseManager {
     } catch {
       // Column already exists on databases created before this migration
     }
+    try {
+      this.db.exec('ALTER TABLE auction_lots ADD COLUMN description TEXT');
+      this.db.exec('ALTER TABLE auction_lots ADD COLUMN image TEXT');
+    } catch {
+      // Columns already exist
+    }
     this.prepareStatements();
   }
 
@@ -59,7 +65,7 @@ export class DatabaseManager {
     this.statements.deleteReminder = this.db.prepare<[number]>('DELETE FROM reminders WHERE id = ?');
     this.statements.getAllPendingReminders = this.db.prepare<[number]>('SELECT * FROM reminders WHERE remind_at > ? ORDER BY remind_at ASC');
     this.statements.insertAuctionLot = this.db.prepare<AuctionLotInsert>(
-      'INSERT INTO auction_lots (auction_id, message_id, channel_id, lot_number, title, starting_bid) VALUES (@auction_id, @message_id, @channel_id, @lot_number, @title, @starting_bid)',
+      'INSERT INTO auction_lots (auction_id, message_id, channel_id, lot_number, title, description, image, starting_bid) VALUES (@auction_id, @message_id, @channel_id, @lot_number, @title, @description, @image, @starting_bid)',
     );
     this.statements.updateAuctionLotMessageId = this.db.prepare<[string, number]>('UPDATE auction_lots SET message_id = ? WHERE id = ?');
     this.statements.getAuctionLot = this.db.prepare<[number]>('SELECT * FROM auction_lots WHERE id = ?');

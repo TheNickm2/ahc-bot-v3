@@ -77,6 +77,8 @@ export class ButtonHandler extends InteractionHandler {
         channel_id: interaction.channelId,
         lot_number: lotNumber,
         title: lot.title,
+        description: lot.description,
+        image: lot.image ?? null,
         starting_bid: lot.startingBid,
       });
       const message = await interaction.channel.send({
