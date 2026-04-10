@@ -27,20 +27,29 @@ export class ButtonHandler extends InteractionHandler {
     const hourReminder = Database.getAuctionReminderForUser(auctionId, userId, 3600);
     const minReminder = Database.getAuctionReminderForUser(auctionId, userId, 900);
 
-    return interaction.editReply({
-      flags: [MessageFlags.IsComponentsV2],
-      components: [
-        AuctionReminderOptInComponents({
-          auctionId,
-          auctionEndTime: auction.end_time,
-          states: {
-            day: !!dayReminder,
-            hour: !!hourReminder,
-            min: !!minReminder,
-          },
-        }),
-      ],
+    const dmComponents = AuctionReminderOptInComponents({
+      auctionId,
+      auctionEndTime: auction.end_time,
+      states: {
+        day: !!dayReminder,
+        hour: !!hourReminder,
+        min: !!minReminder,
+      },
     });
+
+    try {
+      await interaction.user.send({
+        components: [dmComponents],
+        flags: [MessageFlags.IsComponentsV2],
+      });
+      return interaction.editReply({ content: 'Check your DMs! You can toggle your reminders from there. 📬' });
+    } catch {
+      // DMs are closed — fall back to ephemeral
+      return interaction.editReply({
+        flags: [MessageFlags.IsComponentsV2],
+        components: [dmComponents],
+      });
+    }
   }
 
   public override parse(interaction: ButtonInteraction) {
