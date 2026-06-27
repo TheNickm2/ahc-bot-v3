@@ -4,6 +4,7 @@ import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 import { Database } from '../state/state';
 import { OutbidNotifyComponents } from '../utils/messageComponentUtil';
+import { textReply } from '../utils/interactionUtils';
 
 interface ParseResult {
   auctionId: string;
@@ -19,7 +20,7 @@ export class ButtonHandler extends InteractionHandler {
     const auction = Database.getAuction(auctionId);
     const now = Math.floor(Date.now() / 1000);
     if (!auction || auction.end_time <= now) {
-      return interaction.editReply({ content: 'This auction has already ended.', components: [] });
+      return interaction.editReply(textReply('This auction has already ended.'));
     }
 
     const userId = interaction.user.id;

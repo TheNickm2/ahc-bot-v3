@@ -18,7 +18,9 @@ export class ButtonHandler extends InteractionHandler {
 
     const lot = Database.getAuctionLot(lotId);
     if (!lot || !lot.message_id || !lot.channel_id) {
-      return interaction.editReply({ content: 'This lot could not be found. Please contact an officer.' });
+      return interaction.editReply({
+        content: "This lot could not be found. Please contact an officer and let them know there's been an error with the bot.",
+      });
     }
 
     const auction = Database.getAuction(lot.auction_id);

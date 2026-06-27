@@ -1,18 +1,10 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import { ContainerBuilder, MessageFlags, type ButtonInteraction } from 'discord.js';
+import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 import { Database } from '../state/state';
 import { AuctionLotWithBidComponents, OutbidDMComponents } from '../utils/messageComponentUtil';
-
-// Wraps plain text in a ContainerBuilder for components-v2 replies.
-// 'content' field is forbidden when a message is in components-v2 mode.
-function textReply(text: string) {
-  return {
-    flags: [MessageFlags.IsComponentsV2] as [MessageFlags.IsComponentsV2],
-    components: [new ContainerBuilder().addTextDisplayComponents((t) => t.setContent(text))],
-  };
-}
+import { textReply } from '../utils/interactionUtils';
 
 type ParseResult = { action: 'confirm'; lotId: number; amount: number } | { action: 'cancel' };
 
