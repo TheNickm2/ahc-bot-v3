@@ -2,8 +2,9 @@ import nodeSchedule from 'node-schedule';
 import { container } from '@sapphire/framework';
 import { MessageFlags } from 'discord.js';
 import { Database, ReminderScheduler } from '../state/state';
-import { AuctionLotEndedComponents, WinnerDMMessageComponents } from './messageComponentUtil';
+import { AuctionLotEndedComponents, OfficerAuctionRecapComponents, WinnerDMMessageComponents } from './messageComponentUtil';
 import type { LotWinnerRow } from '../types/database';
+import { Constants } from '../config/constants';
 
 export class AuctionEndScheduler {
   constructor() {
@@ -63,6 +64,7 @@ export class AuctionEndScheduler {
     }
 
     // 4. Group winning lots by winner and DM each winner (skip for test auctions)
+    const dmResults = new Map<string, boolean>();
     if (!isTest) {
       const byWinner = new Map<string, LotWinnerRow[]>();
       for (const lot of winners) {
@@ -78,7 +80,9 @@ export class AuctionEndScheduler {
             components: [WinnerDMMessageComponents(wonLots)],
             flags: [MessageFlags.IsComponentsV2],
           });
+          dmResults.set(userId, true);
         } catch (err) {
+          dmResults.set(userId, false);
           container.logger.error(`[AuctionEndScheduler] Failed to DM winner ${userId}:`, err);
         }
       }
@@ -96,6 +100,22 @@ export class AuctionEndScheduler {
         }
       } catch (err) {
         container.logger.error(`[AuctionEndScheduler] Failed to post auction end summary:`, err);
+      }
+
+      // 6. Post the officer recap to the configured log channel (if set)
+      const logChannelId = Constants.AUCTION_LOG_CHANNEL_ID;
+      if (logChannelId) {
+        try {
+          const logChannel = container.client.channels.cache.get(logChannelId) ?? (await container.client.channels.fetch(logChannelId));
+          if (logChannel?.isSendable()) {
+            await logChannel.send({
+              components: [OfficerAuctionRecapComponents({ winners, dmResults, isTest, auctionEndTime: auction.end_time })],
+              flags: [MessageFlags.IsComponentsV2],
+            });
+          }
+        } catch (err) {
+          container.logger.error(`[AuctionEndScheduler] Failed to post officer recap to log channel:`, err);
+        }
       }
     }
 

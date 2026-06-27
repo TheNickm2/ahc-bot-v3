@@ -3,7 +3,7 @@ import { ButtonBuilder, ButtonStyle, ContainerBuilder, SeparatorSpacingSize } fr
 import type { AuctionLot } from '../types/auction';
 import { Constants } from '../config/constants';
 import type { AhfGuildMemberSheetData } from '../types/ahfGuildMemberSheetData';
-import type { AuctionLotRow, BidRow, LotWinnerRow, ReminderRow } from '../types/database';
+import type { AuctionLotRow, AuctionRow, BidRow, LotWinnerRow, ReminderRow } from '../types/database';
 
 export interface AuctionLotMessageComponentsProps {
   lotInfo: AuctionLot;
@@ -280,7 +280,9 @@ export function WinnerDMMessageComponents(wonLots: LotWinnerRow[]) {
     .addTextDisplayComponents((text) => text.setContent(`### 🎉 You won an auction lot!`))
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) =>
-      text.setContent(`You won the following lot(s):\n\n${lotsList}\n\nPlease contact an officer to arrange payment and delivery.`),
+      text.setContent(
+        `You won the following lot(s):\n\n${lotsList}\n\nPlease deposit ${wonLots.reduce((total, lot) => total + lot.winning_amount!, 0).toLocaleString('en-us')}g to the AHC guild bank at your earliest convenience. Lots will be mailed to you within 72 hours of payment. Thank you for participating in the auction!`,
+      ),
     );
 }
 
@@ -308,10 +310,11 @@ export function OutbidNotifyComponents({ auctionId, isSubscribed }: OutbidNotify
 
 export interface OutbidDMComponentsProps {
   lot: AuctionLotRow;
+  auction: AuctionRow;
   newAmount: number;
   guildId: string;
 }
-export function OutbidDMComponents({ lot, newAmount, guildId }: OutbidDMComponentsProps) {
+export function OutbidDMComponents({ lot, auction, newAmount, guildId }: OutbidDMComponentsProps) {
   const lotUrl = `https://discord.com/channels/${guildId}/${lot.channel_id}/${lot.message_id}`;
   return new ContainerBuilder()
     .setAccentColor(Constants.EMBED_COLOR)
@@ -319,7 +322,59 @@ export function OutbidDMComponents({ lot, newAmount, guildId }: OutbidDMComponen
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) =>
       text.setContent(
-        `You were outbid on **Lot ${lot.lot_number}: ${lot.title}**!\nNew top bid: ${Constants.EMOTES.COIN} **${newAmount.toLocaleString('en-us')}** — [Jump to lot →](${lotUrl})\n\nPlace a new bid before the auction ends!`,
+        `You were outbid on **Lot ${lot.lot_number}: ${lot.title}**!\nNew top bid: ${Constants.EMOTES.COIN} **${newAmount.toLocaleString('en-us')}** — [Jump to lot →](${lotUrl})\n\nYou have <t:${Math.floor(auction.end_time)}:R> to place a new bid before the auction ends!`,
       ),
     );
+}
+
+/** Formats a raw gold amount into compact notation: 650 → "650", 165000 → "165k", 2400000 → "2.4m" */
+function formatBidAmount(amount: number): string {
+  if (amount >= 1_000_000) {
+    const m = amount / 1_000_000;
+    return `${m % 1 === 0 ? m : parseFloat(m.toFixed(1))}m`;
+  }
+  if (amount >= 1_000) {
+    const k = amount / 1_000;
+    return `${k % 1 === 0 ? k : parseFloat(k.toFixed(1))}k`;
+  }
+  return amount.toLocaleString('en-us');
+}
+
+export interface OfficerAuctionRecapComponentsProps {
+  winners: LotWinnerRow[];
+  /** Maps winner user_id → whether their DM was delivered successfully */
+  dmResults: Map<string, boolean>;
+  isTest: boolean;
+  auctionEndTime: number;
+}
+export function OfficerAuctionRecapComponents({ winners, dmResults, isTest, auctionEndTime }: OfficerAuctionRecapComponentsProps) {
+  const lotLines = winners
+    .map((lot) => {
+      const lotLabel = `**Lot ${lot.lot_number}: ${lot.title}**`;
+      if (!lot.winner_user_id || lot.winning_amount == null) {
+        return `\`${String(lot.lot_number!).padStart(2, ' ')}.\` ${lotLabel} — *No bids placed*`;
+      }
+      const bidStr = formatBidAmount(lot.winning_amount);
+      let dmStatus: string;
+      if (isTest) {
+        dmStatus = '*(test — DM suppressed)*';
+      } else {
+        dmStatus = dmResults.get(lot.winner_user_id) ? '✅ DM sent' : '⚠️ DM failed';
+      }
+      return `\`${String(lot.lot_number!).padStart(2, ' ')}.\` ${lotLabel} — <@${lot.winner_user_id}> — ${bidStr} — ${dmStatus}`;
+    })
+    .join('\n');
+
+  const grandTotal = winners.reduce((sum, lot) => sum + (lot.winning_amount ?? 0), 0);
+  const grandTotalStr = formatBidAmount(grandTotal);
+
+  const container = new ContainerBuilder()
+    .setAccentColor(Constants.EMBED_COLOR)
+    .addTextDisplayComponents((text) => text.setContent(`### 📋 Auction Winner Log${isTest ? ' *(test run)*' : ''}\nEnded <t:${auctionEndTime}:F>`))
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addTextDisplayComponents((text) => text.setContent(lotLines))
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addTextDisplayComponents((text) => text.setContent(`💰 **Grand Total: ${grandTotalStr}**`));
+
+  return container;
 }

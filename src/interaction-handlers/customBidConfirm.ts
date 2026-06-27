@@ -30,7 +30,9 @@ export class ButtonHandler extends InteractionHandler {
 
     const lot = Database.getAuctionLot(lotId);
     if (!lot || !lot.message_id || !lot.channel_id) {
-      return interaction.editReply(textReply('This lot could not be found. Please contact an officer.'));
+      return interaction.editReply(
+        textReply("This lot could not be found. Please contact an officer and let them know there's an error with the bot."),
+      );
     }
 
     const auction = Database.getAuction(lot.auction_id);
@@ -82,7 +84,7 @@ export class ButtonHandler extends InteractionHandler {
         try {
           const previousBidder = await interaction.client.users.fetch(topBid.user_id);
           await previousBidder.send({
-            components: [OutbidDMComponents({ lot, newAmount: amount, guildId: interaction.guildId! })],
+            components: [OutbidDMComponents({ lot, auction, newAmount: amount, guildId: interaction.guildId! })],
             flags: [MessageFlags.IsComponentsV2],
           });
         } catch (err) {

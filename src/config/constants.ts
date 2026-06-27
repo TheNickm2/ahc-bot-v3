@@ -1,5 +1,6 @@
 export const Constants = {
   DEFAULT_GUILD_IDS: process.env.DEFAULT_GUILD_IDS?.split(',').map((id) => id.trim()),
+  AUCTION_LOG_CHANNEL_ID: process.env.AUCTION_LOG_CHANNEL_ID,
   EMOTES: {
     COIN: '<a:coin:726992358251561091>',
     CHECK: '<a:check:918626532438704129>',

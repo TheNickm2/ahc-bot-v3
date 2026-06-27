@@ -60,7 +60,7 @@ export class ButtonHandler extends InteractionHandler {
         try {
           const previousBidder = await interaction.client.users.fetch(topBid.user_id);
           await previousBidder.send({
-            components: [OutbidDMComponents({ lot, newAmount, guildId: interaction.guildId! })],
+            components: [OutbidDMComponents({ lot, auction, newAmount, guildId: interaction.guildId! })],
             flags: [MessageFlags.IsComponentsV2],
           });
         } catch (err) {
