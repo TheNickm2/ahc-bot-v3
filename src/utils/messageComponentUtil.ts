@@ -71,7 +71,7 @@ export function AuctionSummaryMessageComponents({ auctionLots, endDate, channel,
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId(`${Constants.BUTTON_IDS.OUTBID_NOTIFY}:${auctionId}`)
-          .setLabel('🔕 Outbid Alerts')
+          .setLabel('💸 Outbid Alerts')
           .setStyle(ButtonStyle.Secondary),
       ),
     );
@@ -294,7 +294,7 @@ export function OutbidNotifyComponents({ auctionId, isSubscribed }: OutbidNotify
   return new ContainerBuilder()
     .addTextDisplayComponents((text) =>
       text.setContent(
-        `### 🔕 Outbid Alerts\nIf you're the leading bidder on a lot and someone outbids you, you'll receive a DM with a link directly to the lot.\n\nCurrent status: **${isSubscribed ? 'Enabled ✅' : 'Disabled'}**`,
+        `### 💸 Outbid Alerts\nIf you're the leading bidder on a lot and someone outbids you, you'll receive a DM with a link directly to the lot.\n\nCurrent status: **${isSubscribed ? 'Enabled ✅' : 'Disabled'}**`,
       ),
     )
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))

@@ -4,6 +4,7 @@ import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 import { Database } from '../state/state';
 import { AuctionLotWithBidComponents, OutbidDMComponents } from '../utils/messageComponentUtil';
+import { getCallerLocation } from '../utils/interactionUtils';
 
 interface ParseResult {
   lotId: number;
@@ -19,7 +20,7 @@ export class ButtonHandler extends InteractionHandler {
     const lot = Database.getAuctionLot(lotId);
     if (!lot || !lot.message_id || !lot.channel_id) {
       return interaction.editReply({
-        content: "This lot could not be found. Please contact an officer and let them know there's been an error with the bot.",
+        content: `This lot could not be found. Please contact an officer. *(${getCallerLocation()})*`,
       });
     }
 

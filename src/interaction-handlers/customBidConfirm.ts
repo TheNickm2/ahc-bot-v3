@@ -4,7 +4,7 @@ import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 import { Database } from '../state/state';
 import { AuctionLotWithBidComponents, OutbidDMComponents } from '../utils/messageComponentUtil';
-import { textReply } from '../utils/interactionUtils';
+import { textReply, getCallerLocation } from '../utils/interactionUtils';
 
 type ParseResult = { action: 'confirm'; lotId: number; amount: number } | { action: 'cancel' };
 
@@ -22,9 +22,7 @@ export class ButtonHandler extends InteractionHandler {
 
     const lot = Database.getAuctionLot(lotId);
     if (!lot || !lot.message_id || !lot.channel_id) {
-      return interaction.editReply(
-        textReply("This lot could not be found. Please contact an officer and let them know there's an error with the bot."),
-      );
+      return interaction.editReply(textReply(`This lot could not be found. Please contact an officer. *(${getCallerLocation()})*`));
     }
 
     const auction = Database.getAuction(lot.auction_id);

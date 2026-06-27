@@ -38,11 +38,12 @@ export class ButtonHandler extends InteractionHandler {
     });
 
     try {
-      await interaction.user.send({
+      const dmMessage = await interaction.user.send({
         components: [dmComponents],
         flags: [MessageFlags.IsComponentsV2],
       });
-      return interaction.editReply({ content: 'Check your DMs! You can toggle your reminders from there. 📬' });
+      const dmLink = `https://discord.com/channels/@me/${dmMessage.channel.id}/${dmMessage.id}`;
+      return interaction.editReply({ content: `Check your DMs! 📬 [View message →](${dmLink})` });
     } catch {
       // DMs are closed — fall back to ephemeral
       return interaction.editReply({
