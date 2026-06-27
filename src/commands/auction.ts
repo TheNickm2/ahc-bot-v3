@@ -19,7 +19,10 @@ export class UserCommand extends Command {
           .addStringOption((option) =>
             option.setName('end').setRequired(true).setDescription('The end of the auction - i.e. "Next Thursday at 8PM" - Default TZ US Eastern'),
           )
-          .addStringOption(getTimezoneStringOption()),
+          .addStringOption(getTimezoneStringOption())
+          .addBooleanOption((option) =>
+            option.setName('is-test').setDescription('If true, winners will not receive DMs and the auction is treated as a test run'),
+          ),
       {
         guildIds: Constants.DEFAULT_GUILD_IDS,
       },
@@ -38,7 +41,7 @@ export class UserCommand extends Command {
         flags: [MessageFlags.Ephemeral],
       });
     }
-    AuctionEndDates.set(interaction.id, endDate);
+    AuctionEndDates.set(interaction.id, { endDate, isTest: interaction.options.getBoolean('is-test') ?? false });
     const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId(Constants.BUTTON_IDS.START_AUCTION).setLabel('Start').setStyle(ButtonStyle.Success),
     );

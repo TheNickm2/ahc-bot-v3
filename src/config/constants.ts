@@ -1,5 +1,6 @@
 export const Constants = {
   DEFAULT_GUILD_IDS: process.env.DEFAULT_GUILD_IDS?.split(',').map((id) => id.trim()),
+  AUCTION_LOG_CHANNEL_ID: process.env.AUCTION_LOG_CHANNEL_ID,
   EMOTES: {
     COIN: '<a:coin:726992358251561091>',
     CHECK: '<a:check:918626532438704129>',
@@ -25,5 +26,13 @@ export const Constants = {
     SERVER_BOOSTERS: 'server-boosters',
     REROLL_DICE: 'reroll-dice',
     REFRESH_SHEETS: 'refresh-sheets',
+    BID_QUICK: 'bid-quick',
+    BID_CUSTOM: 'bid-custom',
+    BID_CONFIRM: 'bid-confirm',
+    BID_CANCEL: 'bid-cancel',
+    AUCTION_REMIND: 'auction-remind',
+    AUCTION_REMIND_TOGGLE: 'auction-remind-toggle',
+    OUTBID_NOTIFY: 'outbid-notify',
+    OUTBID_NOTIFY_TOGGLE: 'outbid-notify-toggle',
   },
 };

@@ -10,7 +10,7 @@ export class ReminderScheduleManager {
       if (reminder.remind_at * 1000 < Date.now()) {
         // reminder time is in the past, skip scheduling and delete it
         Database.deleteReminder(reminder.id);
-        container.logger.warn(
+        console.warn(
           `Deleted past reminder with ID ${reminder.id} during scheduler initialization. This should theoretically never happen unless the bot was offline during the reminder time or a bug has affected the reminder scheduling.`,
         );
         return;
