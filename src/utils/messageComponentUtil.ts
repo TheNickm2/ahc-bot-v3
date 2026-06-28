@@ -404,7 +404,7 @@ export function OfficerAuctionRecapComponents({ winners, dmResults, isTest, auct
 
   const container = new ContainerBuilder()
     .setAccentColor(Constants.EMBED_COLOR)
-    .addTextDisplayComponents((text) => text.setContent(`### 📋 Auction Winner Log${isTest ? ' *(test run)*' : ''}\nEnded <t:${auctionEndTime}:F>`))
+    .addTextDisplayComponents((text) => text.setContent(`### Auction Winner Log${isTest ? ' *(test run)*' : ''}\nEnded <t:${auctionEndTime}:F>`))
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) => text.setContent(lotLines))
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))

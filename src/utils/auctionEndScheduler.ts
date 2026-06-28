@@ -99,7 +99,7 @@ export class AuctionEndScheduler {
         const channel = container.client.channels.cache.get(auction.channel_id) ?? (await container.client.channels.fetch(auction.channel_id));
         if (channel?.isSendable()) {
           await channel.send({
-            content: `🏁 **The auction has ended!**${isTest ? ' *(test run — no DMs sent)*' : ''} Winners have been notified via DM.`,
+            content: `**The auction has ended!**${isTest ? ' *(test run — no DMs sent)*' : ''} Winners have been notified via DM.`,
           });
         }
       } catch (err) {
