@@ -3,6 +3,7 @@ export interface AuctionRow {
   id: string;
   end_time: number;
   channel_id: string;
+  summary_message_id: string | null;
   is_test: number;
   created_at: number;
 }
@@ -62,6 +63,11 @@ export interface BidRow {
   lot_id: number;
   user_id: string | null;
   amount: number | null;
+  reverted_at: number | null;
+  reverted_by: string | null;
+  revert_reason: string | null;
+  bid_log_channel_id: string | null;
+  bid_log_message_id: string | null;
   created_at: number;
 }
 
@@ -71,9 +77,31 @@ export interface BidInsert {
   amount: number;
 }
 
+export interface BidLogUpdate {
+  bidId: number;
+  channelId: string;
+  messageId: string;
+}
+
+export interface BidRevertInput {
+  bidId: number;
+  revertedBy: string;
+  reason: string;
+}
+
 export interface LotWinnerRow extends AuctionLotRow {
   winner_user_id: string | null;
   winning_amount: number | null;
+}
+
+export interface AuctionSummaryLotRow {
+  lot_id: number;
+  lot_number: number | null;
+  title: string | null;
+  message_id: string | null;
+  starting_bid: number | null;
+  top_bid_user_id: string | null;
+  top_bid_amount: number | null;
 }
 
 export interface OutbidSubscriptionRow {

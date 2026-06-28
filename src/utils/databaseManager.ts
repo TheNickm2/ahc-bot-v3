@@ -5,7 +5,10 @@ import type {
   AuctionLotInsert,
   AuctionLotRow,
   AuctionRow,
+  AuctionSummaryLotRow,
+  BidLogUpdate,
   BidInsert,
+  BidRevertInput,
   BidRow,
   LotWinnerRow,
   OutbidSubscriptionRow,
@@ -18,6 +21,7 @@ export class DatabaseManager {
   private statements = {
     insertAuction: null as Database.Statement<AuctionInsert> | null,
     getAuction: null as Database.Statement<[string]> | null,
+    updateAuctionSummaryMessageId: null as Database.Statement<[string, string]> | null,
     deleteAuction: null as Database.Statement<[string]> | null,
     insertReminder: null as Database.Statement<[string, string, string, number, string | null]> | null,
     getReminder: null as Database.Statement<[number]> | null,
@@ -29,7 +33,10 @@ export class DatabaseManager {
     getAuctionLot: null as Database.Statement<[number]> | null,
     getAuctionLots: null as Database.Statement<[string]> | null,
     insertBid: null as Database.Statement<[number, string, number]> | null,
+    getBid: null as Database.Statement<[number]> | null,
     getTopBid: null as Database.Statement<[number]> | null,
+    updateBidLogMessage: null as Database.Statement<[string, string, number]> | null,
+    softDeleteBid: null as Database.Statement<[number, string, string, number]> | null,
     getActiveAuction: null as Database.Statement | null,
     getOutbidSubscription: null as Database.Statement<[string, string]> | null,
     insertOutbidSubscription: null as Database.Statement<[string, string]> | null,
@@ -38,6 +45,7 @@ export class DatabaseManager {
 
   constructor() {
     const db = new Database('app.db');
+    db.pragma('foreign_keys = ON');
     const initSql = fs.readFileSync(`${process.cwd()}/src/db/schema.sql`, 'utf-8');
     db.exec(initSql);
     this.db = db;
@@ -47,10 +55,40 @@ export class DatabaseManager {
       // Column already exists on databases created before this migration
     }
     try {
+      this.db.exec('ALTER TABLE auctions ADD COLUMN summary_message_id TEXT');
+    } catch {
+      // Column already exists
+    }
+    try {
       this.db.exec('ALTER TABLE auction_lots ADD COLUMN description TEXT');
       this.db.exec('ALTER TABLE auction_lots ADD COLUMN image TEXT');
     } catch {
       // Columns already exist
+    }
+    try {
+      this.db.exec('ALTER TABLE bids ADD COLUMN reverted_at INTEGER');
+    } catch {
+      // Column already exists
+    }
+    try {
+      this.db.exec('ALTER TABLE bids ADD COLUMN reverted_by TEXT');
+    } catch {
+      // Column already exists
+    }
+    try {
+      this.db.exec('ALTER TABLE bids ADD COLUMN revert_reason TEXT');
+    } catch {
+      // Column already exists
+    }
+    try {
+      this.db.exec('ALTER TABLE bids ADD COLUMN bid_log_channel_id TEXT');
+    } catch {
+      // Column already exists
+    }
+    try {
+      this.db.exec('ALTER TABLE bids ADD COLUMN bid_log_message_id TEXT');
+    } catch {
+      // Column already exists
     }
     this.prepareStatements();
   }
@@ -60,6 +98,7 @@ export class DatabaseManager {
       'INSERT INTO auctions (id, end_time, channel_id, is_test) VALUES (@id, @end_time, @channel_id, @is_test)',
     );
     this.statements.getAuction = this.db.prepare<[string]>('SELECT * FROM auctions WHERE id = ?');
+    this.statements.updateAuctionSummaryMessageId = this.db.prepare<[string, string]>('UPDATE auctions SET summary_message_id = ? WHERE id = ?');
     this.statements.deleteAuction = this.db.prepare<[string]>('DELETE FROM auctions WHERE id = ?');
     this.statements.insertReminder = this.db.prepare<[string, string, string, number, string | null]>(
       'INSERT INTO reminders (user_id, channel_id, message, remind_at, auction_id) VALUES (?, ?, ?, ?, ?)',
@@ -75,7 +114,16 @@ export class DatabaseManager {
     this.statements.getAuctionLot = this.db.prepare<[number]>('SELECT * FROM auction_lots WHERE id = ?');
     this.statements.getAuctionLots = this.db.prepare<[string]>('SELECT * FROM auction_lots WHERE auction_id = ? ORDER BY lot_number ASC');
     this.statements.insertBid = this.db.prepare<[number, string, number]>('INSERT INTO bids (lot_id, user_id, amount) VALUES (?, ?, ?)');
-    this.statements.getTopBid = this.db.prepare<[number]>('SELECT * FROM bids WHERE lot_id = ? ORDER BY amount DESC LIMIT 1');
+    this.statements.getBid = this.db.prepare<[number]>('SELECT * FROM bids WHERE id = ?');
+    this.statements.getTopBid = this.db.prepare<[number]>(
+      'SELECT * FROM bids WHERE lot_id = ? AND reverted_at IS NULL ORDER BY amount DESC, id DESC LIMIT 1',
+    );
+    this.statements.updateBidLogMessage = this.db.prepare<[string, string, number]>(
+      'UPDATE bids SET bid_log_channel_id = ?, bid_log_message_id = ? WHERE id = ?',
+    );
+    this.statements.softDeleteBid = this.db.prepare<[number, string, string, number]>(
+      'UPDATE bids SET reverted_at = ?, reverted_by = ?, revert_reason = ? WHERE id = ? AND reverted_at IS NULL',
+    );
     this.statements.getActiveAuction = this.db.prepare("SELECT * FROM auctions WHERE end_time > strftime('%s', 'now') LIMIT 1");
     this.statements.getOutbidSubscription = this.db.prepare<[string, string]>(
       'SELECT * FROM outbid_subscriptions WHERE auction_id = ? AND user_id = ?',
@@ -95,6 +143,10 @@ export class DatabaseManager {
 
   public getAuction(id: string): AuctionRow | undefined {
     return this.statements.getAuction!.get(id) as AuctionRow | undefined;
+  }
+
+  public updateAuctionSummaryMessageId(auctionId: string, summaryMessageId: string): void {
+    this.statements.updateAuctionSummaryMessageId!.run(summaryMessageId, auctionId);
   }
 
   public deleteAuction(id: string): void {
@@ -159,6 +211,30 @@ export class DatabaseManager {
     return this.statements.getAuctionLots!.all(auctionId) as AuctionLotRow[];
   }
 
+  public getAuctionLotSummaries(auctionId: string): AuctionSummaryLotRow[] {
+    const statement = this.db.prepare<[string]>(`
+      SELECT
+        al.id AS lot_id,
+        al.lot_number,
+        al.title,
+        al.message_id,
+        al.starting_bid,
+        b.user_id AS top_bid_user_id,
+        b.amount AS top_bid_amount
+      FROM auction_lots al
+      LEFT JOIN bids b ON b.id = (
+        SELECT id
+        FROM bids
+        WHERE lot_id = al.id AND reverted_at IS NULL
+        ORDER BY amount DESC, id DESC
+        LIMIT 1
+      )
+      WHERE al.auction_id = ?
+      ORDER BY al.lot_number ASC
+    `);
+    return statement.all(auctionId) as AuctionSummaryLotRow[];
+  }
+
   // Bid methods
   public insertBid(data: BidInsert): Database.RunResult | null {
     return this.db.transaction(() => {
@@ -170,8 +246,33 @@ export class DatabaseManager {
     })();
   }
 
+  public getBid(bidId: number): BidRow | undefined {
+    return this.statements.getBid!.get(bidId) as BidRow | undefined;
+  }
+
   public getTopBid(lotId: number): BidRow | undefined {
     return this.statements.getTopBid!.get(lotId) as BidRow | undefined;
+  }
+
+  public updateBidLogMessage(data: BidLogUpdate): void {
+    this.statements.updateBidLogMessage!.run(data.channelId, data.messageId, data.bidId);
+  }
+
+  public softDeleteBid(data: BidRevertInput): boolean {
+    const revertedAt = Math.floor(Date.now() / 1000);
+    const result = this.statements.softDeleteBid!.run(revertedAt, data.revertedBy, data.reason, data.bidId);
+    return result.changes > 0;
+  }
+
+  public getActiveBidLogsForAuction(auctionId: string): BidRow[] {
+    const statement = this.db.prepare<[string]>(`
+      SELECT b.*
+      FROM bids b
+      JOIN auction_lots al ON al.id = b.lot_id
+      WHERE al.auction_id = ? AND b.reverted_at IS NULL AND b.bid_log_channel_id IS NOT NULL AND b.bid_log_message_id IS NOT NULL
+      ORDER BY b.created_at ASC, b.id ASC
+    `);
+    return statement.all(auctionId) as BidRow[];
   }
 
   public getWinnersForAuction(auctionId: string): LotWinnerRow[] {
@@ -179,7 +280,7 @@ export class DatabaseManager {
       SELECT al.*, b.user_id AS winner_user_id, b.amount AS winning_amount
       FROM auction_lots al
       LEFT JOIN bids b ON b.id = (
-        SELECT id FROM bids WHERE lot_id = al.id ORDER BY amount DESC LIMIT 1
+        SELECT id FROM bids WHERE lot_id = al.id AND reverted_at IS NULL ORDER BY amount DESC, id DESC LIMIT 1
       )
       WHERE al.auction_id = ?
       ORDER BY al.lot_number ASC

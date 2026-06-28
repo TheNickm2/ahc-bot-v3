@@ -63,5 +63,10 @@
       "eslint --fix",
       "prettier --write"
     ]
+  },
+  "allowScripts": {
+    "@sapphire/type@2.6.0": true,
+    "better-sqlite3@12.11.1": true,
+    "esbuild@0.27.2": true
   }
 }

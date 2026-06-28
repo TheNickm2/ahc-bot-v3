@@ -3,18 +3,21 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 import { Database } from '../state/state';
-import { AuctionLotWithBidComponents, OutbidDMComponents } from '../utils/messageComponentUtil';
 import { getCallerLocation } from '../utils/interactionUtils';
+import { placeAuctionBid } from '../utils/auctionBidFlow';
 
 interface ParseResult {
   lotId: number;
+  increment: number;
 }
+
+const ALLOWED_INCREMENTS = new Set([10_000, 25_000, 100_000]);
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
 export class ButtonHandler extends InteractionHandler {
-  public async run(interaction: ButtonInteraction, { lotId }: ParseResult) {
+  public async run(interaction: ButtonInteraction, { lotId, increment }: ParseResult) {
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     const lot = Database.getAuctionLot(lotId);
@@ -31,45 +34,20 @@ export class ButtonHandler extends InteractionHandler {
     }
 
     const topBid = Database.getTopBid(lotId);
-    const newAmount = (topBid?.amount ?? lot.starting_bid!) + 100000;
+    const newAmount = (topBid?.amount ?? lot.starting_bid!) + increment;
 
-    const result = Database.insertBid({ lot_id: lotId, user_id: interaction.user.id, amount: newAmount });
-    if (!result) {
-      // Another bid was placed concurrently that matched or exceeded newAmount
-      const updatedTop = Database.getTopBid(lotId);
+    const result = await placeAuctionBid({
+      client: interaction.client,
+      userId: interaction.user.id,
+      guildId: interaction.guildId!,
+      lot,
+      auction,
+      amount: newAmount,
+    });
+    if (result.status === 'outbid') {
       return interaction.editReply({
-        content: `Someone else bid at the same time! Current top bid: **${updatedTop?.amount?.toLocaleString('en-us') ?? 'unknown'}g**. Please try again.`,
+        content: `Someone else bid at the same time! Current top bid: **${result.currentTopBid?.amount?.toLocaleString('en-us') ?? 'unknown'}g**. Please try again.`,
       });
-    }
-
-    // Edit the lot message to reflect the new bid
-    const updatedTopBid = Database.getTopBid(lotId);
-    try {
-      const channel = interaction.client.channels.cache.get(lot.channel_id) ?? (await interaction.client.channels.fetch(lot.channel_id));
-      if (channel?.isTextBased()) {
-        const message = await channel.messages.fetch(lot.message_id);
-        await message.edit({
-          components: [AuctionLotWithBidComponents({ lot, lotNumber: lot.lot_number!, topBid: updatedTopBid })],
-          flags: [MessageFlags.IsComponentsV2],
-        });
-      }
-    } catch (err) {
-      interaction.client.logger.error(`quickBid: failed to edit lot message for lot ${lotId}:`, err);
-    }
-
-    // Notify the previous top bidder if they have outbid alerts enabled
-    if (topBid && topBid.user_id && topBid.user_id !== interaction.user.id) {
-      if (Database.getOutbidSubscription(lot.auction_id, topBid.user_id)) {
-        try {
-          const previousBidder = await interaction.client.users.fetch(topBid.user_id);
-          await previousBidder.send({
-            components: [OutbidDMComponents({ lot, auction, newAmount, guildId: interaction.guildId! })],
-            flags: [MessageFlags.IsComponentsV2],
-          });
-        } catch (err) {
-          interaction.client.logger.error(`quickBid: failed to send outbid DM to ${topBid.user_id}:`, err);
-        }
-      }
     }
 
     return interaction.editReply({
@@ -79,8 +57,14 @@ export class ButtonHandler extends InteractionHandler {
 
   public override parse(interaction: ButtonInteraction) {
     if (!interaction.customId.startsWith(`${Constants.BUTTON_IDS.BID_QUICK}:`)) return this.none();
-    const lotId = parseInt(interaction.customId.split(':')[1], 10);
+    const parts = interaction.customId.split(':');
+    const lotId = parseInt(parts[1], 10);
     if (isNaN(lotId)) return this.none();
-    return this.some({ lotId });
+
+    // Backward compatibility: old quick-bid buttons only encoded lotId and implicitly meant +100k.
+    const increment = parts[2] ? parseInt(parts[2], 10) : 100_000;
+    if (!Number.isFinite(increment) || !ALLOWED_INCREMENTS.has(increment)) return this.none();
+
+    return this.some({ lotId, increment });
   }
 }

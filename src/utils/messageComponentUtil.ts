@@ -1,9 +1,9 @@
-import type { Collection, GuildTextBasedChannel } from 'discord.js';
+import type { Collection } from 'discord.js';
 import { ButtonBuilder, ButtonStyle, ContainerBuilder, SeparatorSpacingSize } from 'discord.js';
 import type { AuctionLot } from '../types/auction';
 import { Constants } from '../config/constants';
 import type { AhfGuildMemberSheetData } from '../types/ahfGuildMemberSheetData';
-import type { AuctionLotRow, AuctionRow, BidRow, LotWinnerRow, ReminderRow } from '../types/database';
+import type { AuctionLotRow, AuctionRow, AuctionSummaryLotRow, BidRow, LotWinnerRow, ReminderRow } from '../types/database';
 
 export interface AuctionLotMessageComponentsProps {
   lotInfo: AuctionLot;
@@ -26,11 +26,15 @@ export function AuctionLotMessageComponents({ lotInfo, lotNumber, lotId }: Aucti
     container.addMediaGalleryComponents((gallery) =>
       gallery.addItems((item) => item.setURL(lotInfo.image!).setDescription(`Image for Lot ${lotNumber} - ${lotInfo.title}`)),
     );
+    container.addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small));
   }
   if (lotId !== undefined) {
+    container.addTextDisplayComponents((text) => text.setContent('Place a bid using the buttons below:'));
     container.addActionRowComponents((row) =>
       row.addComponents(
-        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}`).setLabel('+100k Bid').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}:10000`).setLabel('+10k Bid').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}:25000`).setLabel('+25k Bid').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}:100000`).setLabel('+100k Bid').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_CUSTOM}:${lotId}`).setLabel('Custom Bid').setStyle(ButtonStyle.Primary),
       ),
     );
@@ -39,30 +43,45 @@ export function AuctionLotMessageComponents({ lotInfo, lotNumber, lotId }: Aucti
 }
 
 export interface AuctionSummaryMessageComponentsProps {
-  auctionLots: Array<AuctionLot & { messageId: string }>;
+  lots: AuctionSummaryLotRow[];
   endDate: Date;
-  channel: GuildTextBasedChannel;
+  channel: { id: string; guild: { id: string } };
   auctionId: string;
+  isEnded?: boolean;
   isTest: boolean;
 }
-export function AuctionSummaryMessageComponents({ auctionLots, endDate, channel, auctionId, isTest }: AuctionSummaryMessageComponentsProps) {
-  const auctionList = auctionLots
-    .map(
-      (lot, index) =>
-        `**Lot ${index + 1} | ${lot.title}**\n[Jump to lot →](https://discord.com/channels/${channel.guild.id}/${channel.id}/${lot.messageId ?? ''})${index < auctionLots.length - 1 ? '\n' : ''}`,
-    )
-    .join('');
+export function AuctionSummaryMessageComponents({
+  lots,
+  endDate,
+  channel,
+  auctionId,
+  isEnded = false,
+  isTest,
+}: AuctionSummaryMessageComponentsProps) {
+  const auctionList = lots
+    .map((lot) => {
+      const lotLabel = `Lot ${lot.lot_number ?? '?'} | ${lot.title ?? 'Untitled Lot'}`;
+      const jumpLink = lot.message_id
+        ? `[Jump to lot →](https://discord.com/channels/${channel.guild.id}/${channel.id}/${lot.message_id})`
+        : 'Jump unavailable';
+      const topBid =
+        lot.top_bid_amount != null && lot.top_bid_user_id
+          ? `${Constants.EMOTES.COIN} ${lot.top_bid_amount.toLocaleString('en-us')} by <@${lot.top_bid_user_id}>`
+          : `${Constants.EMOTES.COIN} ${lot.starting_bid?.toLocaleString('en-us') ?? '0'} (no bids)`;
+      return `**${lotLabel}** — ${topBid} · ${jumpLink}`;
+    })
+    .join('\n');
   const container = new ContainerBuilder()
     .addTextDisplayComponents((text) => text.setContent(`### Auction Summary ${Constants.EMOTES.COIN}`))
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) =>
       text.setContent(
-        `**Auction Ends <t:${Math.round(endDate.getTime() / 1000)}:R>**\nGet your bids in before <t:${Math.round(endDate.getTime() / 1000)}:f> (your local time) ⏰\n\n${auctionList}`,
+        `${isEnded ? '**Auction Ended**' : `**Auction Ends <t:${Math.round(endDate.getTime() / 1000)}:R>**\nGet your bids in before <t:${Math.round(endDate.getTime() / 1000)}:f> (your local time) ⏰`}\n\n${auctionList}`,
       ),
     )
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Large))
-    .addTextDisplayComponents((text) => text.setContent(`**Auction Posted <t:${Math.round(Date.now() / 1000)}:R>**`));
-  if (!isTest) {
+    .addTextDisplayComponents((text) => text.setContent(`**Summary Updated <t:${Math.round(Date.now() / 1000)}:R>**`));
+  if (!isTest && !isEnded) {
     container.addActionRowComponents((row) =>
       row.addComponents(
         new ButtonBuilder()
@@ -172,37 +191,67 @@ export function AuctionLotWithBidComponents({ lot, lotNumber, topBid }: AuctionL
     container.addMediaGalleryComponents((gallery) =>
       gallery.addItems((item) => item.setURL(lot.image!).setDescription(`Image for Lot ${lotNumber} - ${lot.title}`)),
     );
+    container.addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small));
   }
+  container.addTextDisplayComponents((text) => text.setContent('Place a bid using the buttons below:'));
   container.addActionRowComponents((row) =>
     row.addComponents(
-      new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lot.id}`).setLabel('+100k Bid').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lot.id}:10000`).setLabel('+10k').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lot.id}:25000`).setLabel('+25k').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lot.id}:100000`).setLabel('+100k').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_CUSTOM}:${lot.id}`).setLabel('Custom Bid').setStyle(ButtonStyle.Primary),
     ),
   );
   return container;
 }
 
-export interface BidConfirmationComponentsProps {
-  lotId: number;
-  parsedAmount: number;
-  lotTitle: string;
+export interface BidLogComponentsProps {
+  bid: BidRow;
+  lot: AuctionLotRow;
+  includeUndo?: boolean;
+  note?: string;
 }
-export function BidConfirmationComponents({ lotId, parsedAmount, lotTitle }: BidConfirmationComponentsProps) {
-  return new ContainerBuilder()
+export function BidLogComponents({ bid, lot, includeUndo = true, note }: BidLogComponentsProps) {
+  const container = new ContainerBuilder()
+    .setAccentColor(Constants.EMBED_COLOR)
+    .addTextDisplayComponents((text) => text.setContent(`### Bid Logged`))
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) =>
       text.setContent(
-        `I parsed your bid as **${parsedAmount.toLocaleString('en-us')}g** for **${lotTitle}**.\nThis is final and cannot be reversed.`,
-      ),
-    )
-    .addActionRowComponents((row) =>
-      row.addComponents(
-        new ButtonBuilder()
-          .setCustomId(`${Constants.BUTTON_IDS.BID_CONFIRM}:${lotId}:${parsedAmount}`)
-          .setLabel('✅ Confirm Bid')
-          .setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(Constants.BUTTON_IDS.BID_CANCEL).setLabel('❌ Cancel').setStyle(ButtonStyle.Danger),
+        `**Bidder:** <@${bid.user_id}>\n**Bid Amount:** ${Constants.EMOTES.COIN} ${bid.amount!.toLocaleString('en-us')}\n**Lot:** ${lot.title}\n**Lot ID:** ${lot.id}\n**Timestamp:** <t:${bid.created_at}:F>`,
       ),
     );
+
+  if (note) {
+    container
+      .addSeparatorComponents((separator) => separator.setDivider(false).setSpacing(SeparatorSpacingSize.Small))
+      .addTextDisplayComponents((text) => text.setContent(note));
+  }
+
+  if (includeUndo) {
+    container
+      .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Large))
+      .addActionRowComponents((row) =>
+        row.addComponents(
+          new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_UNDO}:${bid.id}`).setLabel('Undo').setStyle(ButtonStyle.Danger),
+        ),
+      );
+  }
+
+  return container;
+}
+
+export interface RevertedBidLogComponentsProps {
+  bid: BidRow;
+  lot: AuctionLotRow;
+}
+export function RevertedBidLogComponents({ bid, lot }: RevertedBidLogComponentsProps) {
+  return BidLogComponents({
+    bid,
+    lot,
+    includeUndo: false,
+    note: `**Reverted:** <t:${bid.reverted_at}:F> by <@${bid.reverted_by}>\n**Reason:** ${bid.revert_reason}`,
+  });
 }
 
 export interface AuctionReminderOptInComponentsProps {
@@ -370,7 +419,7 @@ export function OfficerAuctionRecapComponents({ winners, dmResults, isTest, auct
 
   const container = new ContainerBuilder()
     .setAccentColor(Constants.EMBED_COLOR)
-    .addTextDisplayComponents((text) => text.setContent(`### 📋 Auction Winner Log${isTest ? ' *(test run)*' : ''}\nEnded <t:${auctionEndTime}:F>`))
+    .addTextDisplayComponents((text) => text.setContent(`### Auction Winner Log${isTest ? ' *(test run)*' : ''}\nEnded <t:${auctionEndTime}:F>`))
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) => text.setContent(lotLines))
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))

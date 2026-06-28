@@ -5,6 +5,7 @@ import { Database, ReminderScheduler } from '../state/state';
 import { AuctionLotEndedComponents, OfficerAuctionRecapComponents, WinnerDMMessageComponents } from './messageComponentUtil';
 import type { LotWinnerRow } from '../types/database';
 import { Constants } from '../config/constants';
+import { disableAuctionBidUndoButtons, updateAuctionSummaryMessage } from './auctionBidFlow';
 
 export class AuctionEndScheduler {
   constructor() {
@@ -46,6 +47,9 @@ export class AuctionEndScheduler {
     // 2. Fetch all lots + their top bids in one query
     const winners = Database.getWinnersForAuction(auctionId);
 
+    // 2b. Disable undo buttons for any active bid log entries.
+    await disableAuctionBidUndoButtons(container.client, auctionId);
+
     // 3. Edit each lot message to its ended state (no buttons, shows winner)
     for (const lotWinner of winners) {
       if (!lotWinner.message_id || !lotWinner.channel_id) continue;
@@ -62,6 +66,9 @@ export class AuctionEndScheduler {
         container.logger.error(`[AuctionEndScheduler] Failed to edit lot ${lotWinner.id} message:`, err);
       }
     }
+
+    // 3b. Update the auction summary with final standings and ended state.
+    await updateAuctionSummaryMessage(container.client, auctionId, { isEnded: true });
 
     // 4. Group winning lots by winner and DM each winner (skip for test auctions)
     const dmResults = new Map<string, boolean>();
@@ -95,7 +102,7 @@ export class AuctionEndScheduler {
         const channel = container.client.channels.cache.get(auction.channel_id) ?? (await container.client.channels.fetch(auction.channel_id));
         if (channel?.isSendable()) {
           await channel.send({
-            content: `🏁 **The auction has ended!**${isTest ? ' *(test run — no DMs sent)*' : ''} Winners have been notified via DM.`,
+            content: `**The auction has ended!**${isTest ? ' *(test run — no DMs sent)*' : ''} Winners have been notified via DM.`,
           });
         }
       } catch (err) {
