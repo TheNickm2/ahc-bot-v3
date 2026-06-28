@@ -5,6 +5,7 @@ import { Database, ReminderScheduler } from '../state/state';
 import { AuctionLotEndedComponents, OfficerAuctionRecapComponents, WinnerDMMessageComponents } from './messageComponentUtil';
 import type { LotWinnerRow } from '../types/database';
 import { Constants } from '../config/constants';
+import { disableAuctionBidUndoButtons } from './auctionBidFlow';
 
 export class AuctionEndScheduler {
   constructor() {
@@ -45,6 +46,9 @@ export class AuctionEndScheduler {
 
     // 2. Fetch all lots + their top bids in one query
     const winners = Database.getWinnersForAuction(auctionId);
+
+    // 2b. Disable undo buttons for any active bid log entries.
+    await disableAuctionBidUndoButtons(container.client, auctionId);
 
     // 3. Edit each lot message to its ended state (no buttons, shows winner)
     for (const lotWinner of winners) {

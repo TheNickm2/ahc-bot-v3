@@ -4,7 +4,7 @@ import { MessageFlags, type ModalSubmitInteraction } from 'discord.js';
 import numeral from 'numeral';
 import { Constants } from '../config/constants';
 import { Database } from '../state/state';
-import { BidConfirmationComponents } from '../utils/messageComponentUtil';
+import { placeAuctionBid } from '../utils/auctionBidFlow';
 
 const MODAL_PREFIX = `${Constants.BUTTON_IDS.BID_CUSTOM}-modal:`;
 
@@ -55,9 +55,25 @@ export class ModalHandler extends InteractionHandler {
       });
     }
 
+    const result = await placeAuctionBid({
+      client: interaction.client,
+      userId: interaction.user.id,
+      guildId: interaction.guildId!,
+      lot,
+      auction,
+      amount: parsedAmount,
+    });
+
+    if (result.status === 'outbid') {
+      return interaction.reply({
+        flags: [MessageFlags.Ephemeral],
+        content: `Someone else bid at the same time! Current top bid: **${result.currentTopBid?.amount?.toLocaleString('en-us') ?? 'unknown'}g**. Please bid again.`,
+      });
+    }
+
     return interaction.reply({
-      flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
-      components: [BidConfirmationComponents({ lotId, parsedAmount, lotTitle: lot.title ?? `Lot ${lot.lot_number}` })],
+      flags: [MessageFlags.Ephemeral],
+      content: `Your bid of **${parsedAmount.toLocaleString('en-us')}g** has been placed!`,
     });
   }
 

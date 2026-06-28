@@ -182,27 +182,53 @@ export function AuctionLotWithBidComponents({ lot, lotNumber, topBid }: AuctionL
   return container;
 }
 
-export interface BidConfirmationComponentsProps {
-  lotId: number;
-  parsedAmount: number;
-  lotTitle: string;
+export interface BidLogComponentsProps {
+  bid: BidRow;
+  lot: AuctionLotRow;
+  includeUndo?: boolean;
+  note?: string;
 }
-export function BidConfirmationComponents({ lotId, parsedAmount, lotTitle }: BidConfirmationComponentsProps) {
-  return new ContainerBuilder()
+export function BidLogComponents({ bid, lot, includeUndo = true, note }: BidLogComponentsProps) {
+  const container = new ContainerBuilder()
+    .setAccentColor(Constants.EMBED_COLOR)
+    .addTextDisplayComponents((text) => text.setContent(`### Bid Logged`))
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) =>
       text.setContent(
-        `I parsed your bid as **${parsedAmount.toLocaleString('en-us')}g** for **${lotTitle}**.\nThis is final and cannot be reversed.`,
-      ),
-    )
-    .addActionRowComponents((row) =>
-      row.addComponents(
-        new ButtonBuilder()
-          .setCustomId(`${Constants.BUTTON_IDS.BID_CONFIRM}:${lotId}:${parsedAmount}`)
-          .setLabel('✅ Confirm Bid')
-          .setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(Constants.BUTTON_IDS.BID_CANCEL).setLabel('❌ Cancel').setStyle(ButtonStyle.Danger),
+        `**Bidder:** <@${bid.user_id}>\n**Bid Amount:** ${Constants.EMOTES.COIN} ${bid.amount!.toLocaleString('en-us')}\n**Lot:** ${lot.title}\n**Lot ID:** ${lot.id}\n**Timestamp:** <t:${bid.created_at}:F>`,
       ),
     );
+
+  if (note) {
+    container
+      .addSeparatorComponents((separator) => separator.setDivider(false).setSpacing(SeparatorSpacingSize.Small))
+      .addTextDisplayComponents((text) => text.setContent(note));
+  }
+
+  if (includeUndo) {
+    container
+      .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Large))
+      .addActionRowComponents((row) =>
+        row.addComponents(
+          new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_UNDO}:${bid.id}`).setLabel('Undo').setStyle(ButtonStyle.Danger),
+        ),
+      );
+  }
+
+  return container;
+}
+
+export interface RevertedBidLogComponentsProps {
+  bid: BidRow;
+  lot: AuctionLotRow;
+}
+export function RevertedBidLogComponents({ bid, lot }: RevertedBidLogComponentsProps) {
+  return BidLogComponents({
+    bid,
+    lot,
+    includeUndo: false,
+    note: `**Reverted:** <t:${bid.reverted_at}:F> by <@${bid.reverted_by}>\n**Reason:** ${bid.revert_reason}`,
+  });
 }
 
 export interface AuctionReminderOptInComponentsProps {

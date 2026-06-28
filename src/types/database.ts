@@ -62,6 +62,11 @@ export interface BidRow {
   lot_id: number;
   user_id: string | null;
   amount: number | null;
+  reverted_at: number | null;
+  reverted_by: string | null;
+  revert_reason: string | null;
+  bid_log_channel_id: string | null;
+  bid_log_message_id: string | null;
   created_at: number;
 }
 
@@ -69,6 +74,18 @@ export interface BidInsert {
   lot_id: number;
   user_id: string;
   amount: number;
+}
+
+export interface BidLogUpdate {
+  bidId: number;
+  channelId: string;
+  messageId: string;
+}
+
+export interface BidRevertInput {
+  bidId: number;
+  revertedBy: string;
+  reason: string;
 }
 
 export interface LotWinnerRow extends AuctionLotRow {
