@@ -3,7 +3,7 @@ import { MessageFlags } from 'discord.js';
 import { Constants } from '../config/constants';
 import { Database } from '../state/state';
 import type { AuctionLotRow, AuctionRow, BidRow } from '../types/database';
-import { AuctionLotWithBidComponents, BidLogComponents, OutbidDMComponents } from './messageComponentUtil';
+import { AuctionLotWithBidComponents, AuctionSummaryMessageComponents, BidLogComponents, OutbidDMComponents } from './messageComponentUtil';
 
 interface PlaceAuctionBidInput {
   client: SapphireClient;
@@ -101,6 +101,35 @@ async function logBid(client: SapphireClient, bid: BidRow, lot: AuctionLotRow) {
   }
 }
 
+export async function updateAuctionSummaryMessage(client: SapphireClient, auctionId: string, options?: { isEnded?: boolean }) {
+  const auction = Database.getAuction(auctionId);
+  if (!auction?.summary_message_id) return;
+
+  try {
+    const channel = client.channels.cache.get(auction.channel_id) ?? (await client.channels.fetch(auction.channel_id));
+    if (!channel?.isTextBased()) return;
+    if (!('guild' in channel)) return;
+
+    const summaryMessage = await channel.messages.fetch(auction.summary_message_id);
+    const lots = Database.getAuctionLotSummaries(auctionId);
+    await summaryMessage.edit({
+      components: [
+        AuctionSummaryMessageComponents({
+          lots,
+          endDate: new Date(auction.end_time * 1000),
+          channel,
+          auctionId,
+          isTest: auction.is_test === 1,
+          isEnded: options?.isEnded,
+        }),
+      ],
+      flags: [MessageFlags.IsComponentsV2],
+    });
+  } catch (err) {
+    client.logger.error(`auctionBidFlow: failed to refresh auction summary for auction ${auctionId}:`, err);
+  }
+}
+
 export async function placeAuctionBid({ client, userId, guildId, lot, auction, amount }: PlaceAuctionBidInput): Promise<PlaceAuctionBidResult> {
   const previousTopBid = Database.getTopBid(lot.id);
   const result = Database.insertBid({ lot_id: lot.id, user_id: userId, amount });
@@ -115,6 +144,7 @@ export async function placeAuctionBid({ client, userId, guildId, lot, auction, a
   }
 
   await refreshAuctionLotMessage(client, lot, topBid);
+  await updateAuctionSummaryMessage(client, lot.auction_id);
   await sendOutbidDm({ client, previousTopBid, lot, auction, newAmount: amount, guildId });
   await logBid(client, bid, lot);
 
@@ -140,6 +170,7 @@ export async function revertAuctionBid({ client, bidId, revertedBy, reason }: Re
   if (!updatedBid) return { status: 'missing-bid' };
 
   await refreshAuctionLotMessage(client, lot, Database.getTopBid(lot.id));
+  await updateAuctionSummaryMessage(client, lot.auction_id);
 
   return { status: 'reverted', bid: updatedBid, lot };
 }

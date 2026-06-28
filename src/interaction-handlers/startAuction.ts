@@ -1,10 +1,9 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import { Collection, MessageFlags, TextDisplayBuilder, type ButtonInteraction } from 'discord.js';
+import { MessageFlags, TextDisplayBuilder, type ButtonInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
 import { AuctionEndDates, AuctionEndScheduler, Database, ReminderScheduler } from '../state/state';
 import { AuctionLotHelper } from '../utils/auctionLotHelper';
-import type { AuctionLot } from '../types/auction';
 import { AuctionLotMessageComponents, AuctionSummaryMessageComponents, TimestampHelperMessageComponents } from '../utils/messageComponentUtil';
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -71,7 +70,6 @@ export class ButtonHandler extends InteractionHandler {
       is_test: isTest ? 1 : 0,
     });
 
-    const auctionLotMessages = new Collection<string, AuctionLot & { lotId: number }>();
     for (let i = 0; i < auctionLots.length; i++) {
       const lot = auctionLots[i];
       const lotNumber = i + 1;
@@ -91,20 +89,21 @@ export class ButtonHandler extends InteractionHandler {
       });
       if (!message) continue;
       Database.updateAuctionLotMessageId(lotId, message.id);
-      auctionLotMessages.set(message.id, { ...lot, lotId });
     }
 
+    const summaryLots = Database.getAuctionLotSummaries(auctionId);
     const summaryComponents = AuctionSummaryMessageComponents({
-      auctionLots: auctionLotMessages.map((lot, messageId) => ({ ...lot, messageId })),
+      lots: summaryLots,
       endDate,
       channel: interaction.channel,
       auctionId,
       isTest,
     });
-    await interaction.channel.send({
+    const summaryMessage = await interaction.channel.send({
       components: [summaryComponents],
       flags: [MessageFlags.IsComponentsV2],
     });
+    Database.updateAuctionSummaryMessageId(auctionId, summaryMessage.id);
 
     AuctionEndScheduler.scheduleAuctionEnd(auctionId, endDate, isTest);
 

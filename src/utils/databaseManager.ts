@@ -5,6 +5,7 @@ import type {
   AuctionLotInsert,
   AuctionLotRow,
   AuctionRow,
+  AuctionSummaryLotRow,
   BidLogUpdate,
   BidInsert,
   BidRevertInput,
@@ -20,6 +21,7 @@ export class DatabaseManager {
   private statements = {
     insertAuction: null as Database.Statement<AuctionInsert> | null,
     getAuction: null as Database.Statement<[string]> | null,
+    updateAuctionSummaryMessageId: null as Database.Statement<[string, string]> | null,
     deleteAuction: null as Database.Statement<[string]> | null,
     insertReminder: null as Database.Statement<[string, string, string, number, string | null]> | null,
     getReminder: null as Database.Statement<[number]> | null,
@@ -51,6 +53,11 @@ export class DatabaseManager {
       this.db.exec('ALTER TABLE auctions ADD COLUMN is_test INTEGER DEFAULT 0');
     } catch {
       // Column already exists on databases created before this migration
+    }
+    try {
+      this.db.exec('ALTER TABLE auctions ADD COLUMN summary_message_id TEXT');
+    } catch {
+      // Column already exists
     }
     try {
       this.db.exec('ALTER TABLE auction_lots ADD COLUMN description TEXT');
@@ -91,6 +98,7 @@ export class DatabaseManager {
       'INSERT INTO auctions (id, end_time, channel_id, is_test) VALUES (@id, @end_time, @channel_id, @is_test)',
     );
     this.statements.getAuction = this.db.prepare<[string]>('SELECT * FROM auctions WHERE id = ?');
+    this.statements.updateAuctionSummaryMessageId = this.db.prepare<[string, string]>('UPDATE auctions SET summary_message_id = ? WHERE id = ?');
     this.statements.deleteAuction = this.db.prepare<[string]>('DELETE FROM auctions WHERE id = ?');
     this.statements.insertReminder = this.db.prepare<[string, string, string, number, string | null]>(
       'INSERT INTO reminders (user_id, channel_id, message, remind_at, auction_id) VALUES (?, ?, ?, ?, ?)',
@@ -135,6 +143,10 @@ export class DatabaseManager {
 
   public getAuction(id: string): AuctionRow | undefined {
     return this.statements.getAuction!.get(id) as AuctionRow | undefined;
+  }
+
+  public updateAuctionSummaryMessageId(auctionId: string, summaryMessageId: string): void {
+    this.statements.updateAuctionSummaryMessageId!.run(summaryMessageId, auctionId);
   }
 
   public deleteAuction(id: string): void {
@@ -197,6 +209,30 @@ export class DatabaseManager {
 
   public getAuctionLots(auctionId: string): AuctionLotRow[] {
     return this.statements.getAuctionLots!.all(auctionId) as AuctionLotRow[];
+  }
+
+  public getAuctionLotSummaries(auctionId: string): AuctionSummaryLotRow[] {
+    const statement = this.db.prepare<[string]>(`
+      SELECT
+        al.id AS lot_id,
+        al.lot_number,
+        al.title,
+        al.message_id,
+        al.starting_bid,
+        b.user_id AS top_bid_user_id,
+        b.amount AS top_bid_amount
+      FROM auction_lots al
+      LEFT JOIN bids b ON b.id = (
+        SELECT id
+        FROM bids
+        WHERE lot_id = al.id AND reverted_at IS NULL
+        ORDER BY amount DESC, id DESC
+        LIMIT 1
+      )
+      WHERE al.auction_id = ?
+      ORDER BY al.lot_number ASC
+    `);
+    return statement.all(auctionId) as AuctionSummaryLotRow[];
   }
 
   // Bid methods

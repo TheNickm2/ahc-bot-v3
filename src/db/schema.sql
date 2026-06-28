@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS auctions (
   id TEXT PRIMARY KEY,              -- interaction.id or message.id
   end_time INTEGER NOT NULL,        -- Unix timestamp
   channel_id TEXT NOT NULL,
+  summary_message_id TEXT,
   is_test INTEGER DEFAULT 0,        -- 1 if this is a test auction
   created_at INTEGER DEFAULT (strftime('%s', 'now'))
 );

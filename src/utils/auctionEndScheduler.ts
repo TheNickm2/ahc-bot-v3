@@ -5,7 +5,7 @@ import { Database, ReminderScheduler } from '../state/state';
 import { AuctionLotEndedComponents, OfficerAuctionRecapComponents, WinnerDMMessageComponents } from './messageComponentUtil';
 import type { LotWinnerRow } from '../types/database';
 import { Constants } from '../config/constants';
-import { disableAuctionBidUndoButtons } from './auctionBidFlow';
+import { disableAuctionBidUndoButtons, updateAuctionSummaryMessage } from './auctionBidFlow';
 
 export class AuctionEndScheduler {
   constructor() {
@@ -66,6 +66,9 @@ export class AuctionEndScheduler {
         container.logger.error(`[AuctionEndScheduler] Failed to edit lot ${lotWinner.id} message:`, err);
       }
     }
+
+    // 3b. Update the auction summary with final standings and ended state.
+    await updateAuctionSummaryMessage(container.client, auctionId, { isEnded: true });
 
     // 4. Group winning lots by winner and DM each winner (skip for test auctions)
     const dmResults = new Map<string, boolean>();
