@@ -26,11 +26,15 @@ export function AuctionLotMessageComponents({ lotInfo, lotNumber, lotId }: Aucti
     container.addMediaGalleryComponents((gallery) =>
       gallery.addItems((item) => item.setURL(lotInfo.image!).setDescription(`Image for Lot ${lotNumber} - ${lotInfo.title}`)),
     );
+    container.addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small));
   }
   if (lotId !== undefined) {
+    container.addTextDisplayComponents((text) => text.setContent('Place a bid using the buttons below:'));
     container.addActionRowComponents((row) =>
       row.addComponents(
-        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}`).setLabel('+100k Bid').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}:10000`).setLabel('+10k Bid').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}:25000`).setLabel('+25k Bid').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}:100000`).setLabel('+100k Bid').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_CUSTOM}:${lotId}`).setLabel('Custom Bid').setStyle(ButtonStyle.Primary),
       ),
     );
@@ -172,10 +176,14 @@ export function AuctionLotWithBidComponents({ lot, lotNumber, topBid }: AuctionL
     container.addMediaGalleryComponents((gallery) =>
       gallery.addItems((item) => item.setURL(lot.image!).setDescription(`Image for Lot ${lotNumber} - ${lot.title}`)),
     );
+    container.addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small));
   }
+  container.addTextDisplayComponents((text) => text.setContent('Place a bid using the buttons below:'));
   container.addActionRowComponents((row) =>
     row.addComponents(
-      new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lot.id}`).setLabel('+100k Bid').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lot.id}:10000`).setLabel('+10k').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lot.id}:25000`).setLabel('+25k').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lot.id}:100000`).setLabel('+100k').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_CUSTOM}:${lot.id}`).setLabel('Custom Bid').setStyle(ButtonStyle.Primary),
     ),
   );

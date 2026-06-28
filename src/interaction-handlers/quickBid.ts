@@ -8,13 +8,16 @@ import { placeAuctionBid } from '../utils/auctionBidFlow';
 
 interface ParseResult {
   lotId: number;
+  increment: number;
 }
+
+const ALLOWED_INCREMENTS = new Set([10_000, 25_000, 100_000]);
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
 export class ButtonHandler extends InteractionHandler {
-  public async run(interaction: ButtonInteraction, { lotId }: ParseResult) {
+  public async run(interaction: ButtonInteraction, { lotId, increment }: ParseResult) {
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     const lot = Database.getAuctionLot(lotId);
@@ -31,7 +34,7 @@ export class ButtonHandler extends InteractionHandler {
     }
 
     const topBid = Database.getTopBid(lotId);
-    const newAmount = (topBid?.amount ?? lot.starting_bid!) + 100000;
+    const newAmount = (topBid?.amount ?? lot.starting_bid!) + increment;
 
     const result = await placeAuctionBid({
       client: interaction.client,
@@ -54,8 +57,14 @@ export class ButtonHandler extends InteractionHandler {
 
   public override parse(interaction: ButtonInteraction) {
     if (!interaction.customId.startsWith(`${Constants.BUTTON_IDS.BID_QUICK}:`)) return this.none();
-    const lotId = parseInt(interaction.customId.split(':')[1], 10);
+    const parts = interaction.customId.split(':');
+    const lotId = parseInt(parts[1], 10);
     if (isNaN(lotId)) return this.none();
-    return this.some({ lotId });
+
+    // Backward compatibility: old quick-bid buttons only encoded lotId and implicitly meant +100k.
+    const increment = parts[2] ? parseInt(parts[2], 10) : 100_000;
+    if (!Number.isFinite(increment) || !ALLOWED_INCREMENTS.has(increment)) return this.none();
+
+    return this.some({ lotId, increment });
   }
 }
