@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { MessageFlags, type ModalSubmitInteraction } from 'discord.js';
 import { Constants } from '../config/constants';
-import { revertAuctionBid } from '../utils/auctionBidFlow';
+import { closeBidderUndoWindow, revertAuctionBid } from '../utils/auctionBidFlow';
 import { RevertedBidLogComponents } from '../utils/messageComponentUtil';
 
 const MODAL_PREFIX = `${Constants.BUTTON_IDS.BID_UNDO_REASON}:`;
@@ -57,6 +57,8 @@ export class ModalHandler extends InteractionHandler {
           return interaction.followUp({ flags: [MessageFlags.Ephemeral], content: 'This auction has already ended. Undo is no longer available.' });
         return interaction.editReply({ content: 'This auction has already ended. Undo is no longer available.' });
       case 'reverted':
+        await closeBidderUndoWindow(interaction.client, bidId, 'reverted');
+
         if (!isFromMessage) {
           return interaction.editReply({ content: 'Bid reverted, but the log message could not be updated automatically.' });
         }

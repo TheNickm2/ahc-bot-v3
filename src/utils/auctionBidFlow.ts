@@ -1,9 +1,17 @@
+import nodeSchedule from 'node-schedule';
 import type { SapphireClient } from '@sapphire/framework';
 import { MessageFlags } from 'discord.js';
 import { Constants } from '../config/constants';
 import { Database } from '../state/state';
 import type { AuctionLotRow, AuctionRow, BidRow } from '../types/database';
-import { AuctionLotWithBidComponents, AuctionSummaryMessageComponents, BidLogComponents, OutbidDMComponents } from './messageComponentUtil';
+import {
+  AuctionLotWithBidComponents,
+  AuctionSummaryMessageComponents,
+  BidLogComponents,
+  BidPlacedDMComponents,
+  OutbidDMComponents,
+  RevertedBidLogComponents,
+} from './messageComponentUtil';
 
 interface PlaceAuctionBidInput {
   client: SapphireClient;
@@ -14,7 +22,9 @@ interface PlaceAuctionBidInput {
   amount: number;
 }
 
-type PlaceAuctionBidResult = { status: 'placed'; bid: BidRow; topBid: BidRow } | { status: 'outbid'; currentTopBid?: BidRow };
+type PlaceAuctionBidResult =
+  | { status: 'placed'; bid: BidRow; topBid: BidRow; confirmationDmSent: boolean }
+  | { status: 'outbid'; currentTopBid?: BidRow };
 
 interface RevertAuctionBidInput {
   client: SapphireClient;
@@ -29,6 +39,76 @@ type RevertAuctionBidResult =
   | { status: 'missing-bid' }
   | { status: 'missing-lot' }
   | { status: 'auction-ended' };
+
+const USER_UNDO_WINDOW_SECONDS = 300;
+
+type BidderUndoCloseReason = 'expired' | 'outbid' | 'auction-ended' | 'reverted';
+
+function bidderUndoJobName(bidId: number) {
+  return `bidder-undo-expire:${bidId}`;
+}
+
+function getBidLotUrl(guildId: string, lot: AuctionLotRow): string | undefined {
+  if (!lot.channel_id || !lot.message_id) return undefined;
+  return `https://discord.com/channels/${guildId}/${lot.channel_id}/${lot.message_id}`;
+}
+
+function bidderUndoClosureNote(reason: BidderUndoCloseReason): string {
+  switch (reason) {
+    case 'outbid':
+      return 'This undo option is no longer available because this bid has been outbid. If you need help or spot an error, please contact an officer.';
+    case 'auction-ended':
+      return 'This undo option is no longer available because the auction has ended. If you need help or spot an error, please contact an officer.';
+    case 'reverted':
+      return 'This bid has already been reverted. If you need help or spot an error, please contact an officer.';
+    case 'expired':
+    default:
+      return 'The self-serve undo window has expired. If you need help or spot an error, please contact an officer.';
+  }
+}
+
+function scheduleBidderUndoExpiry(client: SapphireClient, bid: BidRow) {
+  if (!bid.bidder_undo_until) return;
+
+  const existing = nodeSchedule.scheduledJobs[bidderUndoJobName(bid.id)];
+  if (existing) existing.cancel();
+
+  const runAt = new Date(bid.bidder_undo_until * 1000);
+  if (runAt <= new Date()) {
+    void closeBidderUndoWindow(client, bid.id, 'expired');
+    return;
+  }
+
+  nodeSchedule.scheduleJob(bidderUndoJobName(bid.id), runAt, async () => {
+    await closeBidderUndoWindow(client, bid.id, 'expired');
+  });
+}
+
+async function sendBidConfirmationDm({
+  client,
+  bid,
+  lot,
+  guildId,
+}: {
+  client: SapphireClient;
+  bid: BidRow;
+  lot: AuctionLotRow;
+  guildId: string;
+}): Promise<{ channelId: string; messageId: string } | null> {
+  if (!bid.user_id) return null;
+
+  try {
+    const user = await client.users.fetch(bid.user_id);
+    const dmMessage = await user.send({
+      components: [BidPlacedDMComponents({ bid, lot, lotUrl: getBidLotUrl(guildId, lot) })],
+      flags: [MessageFlags.IsComponentsV2],
+    });
+    return { channelId: dmMessage.channel.id, messageId: dmMessage.id };
+  } catch (err) {
+    client.logger.warn(`auctionBidFlow: failed to send bid confirmation DM for bid ${bid.id}.`, err);
+    return null;
+  }
+}
 
 async function refreshAuctionLotMessage(client: SapphireClient, lot: AuctionLotRow, topBid?: BidRow) {
   if (!lot.message_id || !lot.channel_id) return;
@@ -145,10 +225,30 @@ export async function placeAuctionBid({ client, userId, guildId, lot, auction, a
 
   await refreshAuctionLotMessage(client, lot, topBid);
   await updateAuctionSummaryMessage(client, lot.auction_id);
+
+  if (previousTopBid?.id) {
+    await closeBidderUndoWindow(client, previousTopBid.id, 'outbid');
+  }
+
   await sendOutbidDm({ client, previousTopBid, lot, auction, newAmount: amount, guildId });
   await logBid(client, bid, lot);
 
-  return { status: 'placed', bid, topBid };
+  const undoUntil = Math.min((bid.created_at ?? Math.floor(Date.now() / 1000)) + USER_UNDO_WINDOW_SECONDS, auction.end_time);
+  const confirmation = await sendBidConfirmationDm({ client, bid, lot, guildId });
+  if (confirmation) {
+    Database.updateBidderConfirmationMessage({
+      bidId: bid.id,
+      channelId: confirmation.channelId,
+      messageId: confirmation.messageId,
+      undoUntil,
+    });
+    const refreshedBid = Database.getBid(bid.id);
+    if (refreshedBid) {
+      scheduleBidderUndoExpiry(client, refreshedBid);
+    }
+  }
+
+  return { status: 'placed', bid, topBid, confirmationDmSent: !!confirmation };
 }
 
 export async function revertAuctionBid({ client, bidId, revertedBy, reason }: RevertAuctionBidInput): Promise<RevertAuctionBidResult> {
@@ -173,6 +273,82 @@ export async function revertAuctionBid({ client, bidId, revertedBy, reason }: Re
   await updateAuctionSummaryMessage(client, lot.auction_id);
 
   return { status: 'reverted', bid: updatedBid, lot };
+}
+
+export async function updateBidLogMessageAsReverted(client: SapphireClient, bid: BidRow, lot: AuctionLotRow): Promise<void> {
+  if (!bid.bid_log_channel_id || !bid.bid_log_message_id) return;
+
+  try {
+    const channel = client.channels.cache.get(bid.bid_log_channel_id) ?? (await client.channels.fetch(bid.bid_log_channel_id));
+    if (!channel?.isTextBased()) return;
+
+    const message = await channel.messages.fetch(bid.bid_log_message_id);
+    await message.edit({
+      components: [RevertedBidLogComponents({ bid, lot })],
+      flags: [MessageFlags.IsComponentsV2],
+    });
+  } catch (err) {
+    client.logger.error(`auctionBidFlow: failed to update bid log message for reverted bid ${bid.id}:`, err);
+  }
+}
+
+export async function closeBidderUndoWindow(client: SapphireClient, bidId: number, reason: BidderUndoCloseReason): Promise<void> {
+  const bid = Database.getBid(bidId);
+  if (!bid || bid.bidder_undo_until == null) return;
+
+  const job = nodeSchedule.scheduledJobs[bidderUndoJobName(bidId)];
+  if (job) job.cancel();
+
+  const lot = Database.getAuctionLot(bid.lot_id);
+  if (!lot) {
+    Database.clearBidderUndoWindow(bidId);
+    return;
+  }
+
+  if (bid.bidder_confirmation_channel_id && bid.bidder_confirmation_message_id && bid.user_id) {
+    try {
+      const channel =
+        client.channels.cache.get(bid.bidder_confirmation_channel_id) ?? (await client.channels.fetch(bid.bidder_confirmation_channel_id));
+      if (channel?.isTextBased()) {
+        const message = await channel.messages.fetch(bid.bidder_confirmation_message_id);
+        await message.edit({
+          components: [
+            BidPlacedDMComponents({
+              bid,
+              lot,
+              includeUndo: false,
+              note: bidderUndoClosureNote(reason),
+            }),
+          ],
+          flags: [MessageFlags.IsComponentsV2],
+        });
+      }
+    } catch (err) {
+      client.logger.warn(`auctionBidFlow: failed to close bidder undo window DM for bid ${bid.id}.`, err);
+    }
+  }
+
+  Database.clearBidderUndoWindow(bidId);
+}
+
+export async function closeBidderUndoWindowsForAuction(client: SapphireClient, auctionId: string): Promise<void> {
+  const openBids = Database.getBidsWithOpenBidderUndoWindowForAuction(auctionId);
+  for (const bid of openBids) {
+    await closeBidderUndoWindow(client, bid.id, 'auction-ended');
+  }
+}
+
+export async function rehydrateBidderUndoWindowJobs(client: SapphireClient): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  const openBids = Database.getBidsWithOpenBidderUndoWindow();
+
+  for (const bid of openBids) {
+    if (!bid.bidder_undo_until || bid.bidder_undo_until <= now) {
+      await closeBidderUndoWindow(client, bid.id, 'expired');
+      continue;
+    }
+    scheduleBidderUndoExpiry(client, bid);
+  }
 }
 
 export async function disableAuctionBidUndoButtons(client: SapphireClient, auctionId: string) {

@@ -68,6 +68,10 @@ export interface BidRow {
   revert_reason: string | null;
   bid_log_channel_id: string | null;
   bid_log_message_id: string | null;
+  bidder_confirmation_channel_id: string | null;
+  bidder_confirmation_message_id: string | null;
+  bidder_undo_until: number | null;
+  bidder_undo_closed_at: number | null;
   created_at: number;
 }
 
@@ -81,6 +85,13 @@ export interface BidLogUpdate {
   bidId: number;
   channelId: string;
   messageId: string;
+}
+
+export interface BidderConfirmationUpdate {
+  bidId: number;
+  channelId: string;
+  messageId: string;
+  undoUntil: number;
 }
 
 export interface BidRevertInput {

@@ -6,6 +6,7 @@ import type {
   AuctionLotRow,
   AuctionRow,
   AuctionSummaryLotRow,
+  BidderConfirmationUpdate,
   BidLogUpdate,
   BidInsert,
   BidRevertInput,
@@ -37,6 +38,8 @@ export class DatabaseManager {
     getBidHistoryForLot: null as Database.Statement<[number]> | null,
     getTopBid: null as Database.Statement<[number]> | null,
     updateBidLogMessage: null as Database.Statement<[string, string, number]> | null,
+    updateBidderConfirmationMessage: null as Database.Statement<[string, string, number, number]> | null,
+    clearBidderUndoWindow: null as Database.Statement<[number, number]> | null,
     softDeleteBid: null as Database.Statement<[number, string, string, number]> | null,
     getActiveAuction: null as Database.Statement | null,
     getOutbidSubscription: null as Database.Statement<[string, string]> | null,
@@ -91,6 +94,26 @@ export class DatabaseManager {
     } catch {
       // Column already exists
     }
+    try {
+      this.db.exec('ALTER TABLE bids ADD COLUMN bidder_confirmation_channel_id TEXT');
+    } catch {
+      // Column already exists
+    }
+    try {
+      this.db.exec('ALTER TABLE bids ADD COLUMN bidder_confirmation_message_id TEXT');
+    } catch {
+      // Column already exists
+    }
+    try {
+      this.db.exec('ALTER TABLE bids ADD COLUMN bidder_undo_until INTEGER');
+    } catch {
+      // Column already exists
+    }
+    try {
+      this.db.exec('ALTER TABLE bids ADD COLUMN bidder_undo_closed_at INTEGER');
+    } catch {
+      // Column already exists
+    }
     this.prepareStatements();
   }
 
@@ -122,6 +145,12 @@ export class DatabaseManager {
     );
     this.statements.updateBidLogMessage = this.db.prepare<[string, string, number]>(
       'UPDATE bids SET bid_log_channel_id = ?, bid_log_message_id = ? WHERE id = ?',
+    );
+    this.statements.updateBidderConfirmationMessage = this.db.prepare<[string, string, number, number]>(
+      'UPDATE bids SET bidder_confirmation_channel_id = ?, bidder_confirmation_message_id = ?, bidder_undo_until = ?, bidder_undo_closed_at = NULL WHERE id = ?',
+    );
+    this.statements.clearBidderUndoWindow = this.db.prepare<[number, number]>(
+      'UPDATE bids SET bidder_undo_until = NULL, bidder_undo_closed_at = ? WHERE id = ? AND bidder_undo_until IS NOT NULL',
     );
     this.statements.softDeleteBid = this.db.prepare<[number, string, string, number]>(
       'UPDATE bids SET reverted_at = ?, reverted_by = ?, revert_reason = ? WHERE id = ? AND reverted_at IS NULL',
@@ -264,6 +293,16 @@ export class DatabaseManager {
     this.statements.updateBidLogMessage!.run(data.channelId, data.messageId, data.bidId);
   }
 
+  public updateBidderConfirmationMessage(data: BidderConfirmationUpdate): void {
+    this.statements.updateBidderConfirmationMessage!.run(data.channelId, data.messageId, data.undoUntil, data.bidId);
+  }
+
+  public clearBidderUndoWindow(bidId: number): boolean {
+    const closedAt = Math.floor(Date.now() / 1000);
+    const result = this.statements.clearBidderUndoWindow!.run(closedAt, bidId);
+    return result.changes > 0;
+  }
+
   public softDeleteBid(data: BidRevertInput): boolean {
     const revertedAt = Math.floor(Date.now() / 1000);
     const result = this.statements.softDeleteBid!.run(revertedAt, data.revertedBy, data.reason, data.bidId);
@@ -277,6 +316,34 @@ export class DatabaseManager {
       JOIN auction_lots al ON al.id = b.lot_id
       WHERE al.auction_id = ? AND b.reverted_at IS NULL AND b.bid_log_channel_id IS NOT NULL AND b.bid_log_message_id IS NOT NULL
       ORDER BY b.created_at ASC, b.id ASC
+    `);
+    return statement.all(auctionId) as BidRow[];
+  }
+
+  public getBidsWithOpenBidderUndoWindow(): BidRow[] {
+    const statement = this.db.prepare(`
+      SELECT *
+      FROM bids
+      WHERE reverted_at IS NULL
+        AND bidder_confirmation_channel_id IS NOT NULL
+        AND bidder_confirmation_message_id IS NOT NULL
+        AND bidder_undo_until IS NOT NULL
+      ORDER BY bidder_undo_until ASC, id ASC
+    `);
+    return statement.all() as BidRow[];
+  }
+
+  public getBidsWithOpenBidderUndoWindowForAuction(auctionId: string): BidRow[] {
+    const statement = this.db.prepare<[string]>(`
+      SELECT b.*
+      FROM bids b
+      JOIN auction_lots al ON al.id = b.lot_id
+      WHERE al.auction_id = ?
+        AND b.reverted_at IS NULL
+        AND b.bidder_confirmation_channel_id IS NOT NULL
+        AND b.bidder_confirmation_message_id IS NOT NULL
+        AND b.bidder_undo_until IS NOT NULL
+      ORDER BY b.bidder_undo_until ASC, b.id ASC
     `);
     return statement.all(auctionId) as BidRow[];
   }

@@ -45,6 +45,10 @@ CREATE TABLE IF NOT EXISTS bids (
   revert_reason TEXT,
   bid_log_channel_id TEXT,
   bid_log_message_id TEXT,
+  bidder_confirmation_channel_id TEXT,
+  bidder_confirmation_message_id TEXT,
+  bidder_undo_until INTEGER,
+  bidder_undo_closed_at INTEGER,
   created_at INTEGER DEFAULT (strftime('%s', 'now')),
   FOREIGN KEY (lot_id) REFERENCES auction_lots(id) ON DELETE CASCADE
 );

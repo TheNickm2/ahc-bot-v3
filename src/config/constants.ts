@@ -2,6 +2,7 @@ export const Constants = {
   DEFAULT_GUILD_IDS: process.env.DEFAULT_GUILD_IDS?.split(',').map((id) => id.trim()),
   AUCTION_LOG_CHANNEL_ID: process.env.AUCTION_LOG_CHANNEL_ID,
   AUCTION_BID_LOG_CHANNEL_ID: process.env.AUCTION_BID_LOG_CHANNEL_ID,
+  AUCTION_OFFICER_ROLE_ID: process.env.AUCTION_OFFICER_ROLE_ID,
   EMOTES: {
     COIN: '<a:coin:726992358251561091>',
     CHECK: '<a:check:918626532438704129>',
@@ -30,6 +31,8 @@ export const Constants = {
     BID_QUICK: 'bid-quick',
     BID_CUSTOM: 'bid-custom',
     BID_HISTORY: 'bid-history',
+    BID_SELF_UNDO: 'bid-self-undo',
+    BID_SELF_UNDO_REASON: 'bid-self-undo-reason',
     BID_UNDO: 'bid-undo',
     BID_UNDO_REASON: 'bid-undo-reason',
     AUCTION_REMIND: 'auction-remind',

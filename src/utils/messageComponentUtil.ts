@@ -252,6 +252,48 @@ export interface BidLogComponentsProps {
   includeUndo?: boolean;
   note?: string;
 }
+
+export interface BidPlacedDMComponentsProps {
+  bid: BidRow;
+  lot: AuctionLotRow;
+  includeUndo?: boolean;
+  note?: string;
+  lotUrl?: string;
+}
+
+export function BidPlacedDMComponents({ bid, lot, includeUndo = true, note, lotUrl }: BidPlacedDMComponentsProps) {
+  const container = new ContainerBuilder()
+    .setAccentColor(Constants.EMBED_COLOR)
+    .addTextDisplayComponents((text) => text.setContent('### Bid Confirmation'))
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addTextDisplayComponents((text) =>
+      text.setContent(
+        `Your bid was placed successfully.\n\n**Lot:** ${lot.lot_number}: ${lot.title}\n**Amount:** ${Constants.EMOTES.COIN} ${bid.amount!.toLocaleString('en-us')}\n**Timestamp:** <t:${bid.created_at}:F>${lotUrl ? `\n[Jump to lot →](${lotUrl})` : ''}`,
+      ),
+    );
+
+  if (includeUndo) {
+    container
+      .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+      .addActionRowComponents((row) =>
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`${Constants.BUTTON_IDS.BID_SELF_UNDO}:${bid.id}`)
+            .setLabel('Undo This Bid (5 minute limit)')
+            .setStyle(ButtonStyle.Danger),
+        ),
+      );
+  }
+
+  if (note) {
+    container
+      .addSeparatorComponents((separator) => separator.setDivider(false).setSpacing(SeparatorSpacingSize.Small))
+      .addTextDisplayComponents((text) => text.setContent(note));
+  }
+
+  return container;
+}
+
 export function BidLogComponents({ bid, lot, includeUndo = true, note }: BidLogComponentsProps) {
   const container = new ContainerBuilder()
     .setAccentColor(Constants.EMBED_COLOR)

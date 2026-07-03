@@ -69,9 +69,14 @@ export class ModalHandler extends InteractionHandler {
       });
     }
 
-    return interaction.editReply({
-      content: `Your bid of **${parsedAmount.toLocaleString('en-us')}g** has been placed!`,
-    });
+    if (!result.confirmationDmSent) {
+      return interaction.editReply({
+        content: `Your bid of **${parsedAmount.toLocaleString('en-us')}g** was placed, but I could not DM you the confirmation. Please enable DMs and try again next time.`,
+      });
+    }
+
+    await interaction.deleteReply();
+    return;
   }
 
   public override parse(interaction: ModalSubmitInteraction) {

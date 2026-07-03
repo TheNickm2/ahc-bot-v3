@@ -2,6 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Listener } from '@sapphire/framework';
 import type { StoreRegistryValue } from '@sapphire/pieces';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
+import { rehydrateBidderUndoWindowJobs } from '../utils/auctionBidFlow';
 
 const dev = process.env.NODE_ENV !== 'production';
 
@@ -9,9 +10,10 @@ const dev = process.env.NODE_ENV !== 'production';
 export class UserEvent extends Listener {
   private readonly style = dev ? yellow : blue;
 
-  public override run() {
+  public override async run() {
     this.printBanner();
     this.printStoreDebugInformation();
+    await rehydrateBidderUndoWindowJobs(this.container.client);
   }
 
   private printBanner() {
