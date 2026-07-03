@@ -5,7 +5,7 @@ import { Database, ReminderScheduler } from '../state/state';
 import { AuctionLotEndedComponents, OfficerAuctionRecapComponents, WinnerDMMessageComponents } from './messageComponentUtil';
 import type { LotWinnerRow } from '../types/database';
 import { Constants } from '../config/constants';
-import { disableAuctionBidUndoButtons, updateAuctionSummaryMessage } from './auctionBidFlow';
+import { updateAuctionSummaryMessage } from './auctionBidFlow';
 
 export class AuctionEndScheduler {
   constructor() {
@@ -38,19 +38,10 @@ export class AuctionEndScheduler {
   private async executeAuctionEnd(auctionId: string, isTest: boolean): Promise<void> {
     container.logger.info(`[AuctionEndScheduler] Executing auction end for ${auctionId} (isTest: ${isTest}).`);
 
-    // 1. Cancel any pending reminder jobs for this auction (they're no longer relevant)
-    const reminders = Database.getAuctionReminders(auctionId);
-    for (const reminder of reminders) {
-      ReminderScheduler.cancelReminder(reminder.id);
-    }
-
-    // 2. Fetch all lots + their top bids in one query
+    // 1. Fetch all lots + their top bids in one query
     const winners = Database.getWinnersForAuction(auctionId);
 
-    // 2b. Disable undo buttons for any active bid log entries.
-    await disableAuctionBidUndoButtons(container.client, auctionId);
-
-    // 3. Edit each lot message to its ended state (no buttons, shows winner)
+    // 2. Edit each lot message to its ended state first (no bidding buttons, shows winner)
     for (const lotWinner of winners) {
       if (!lotWinner.message_id || !lotWinner.channel_id) continue;
       try {
@@ -67,10 +58,16 @@ export class AuctionEndScheduler {
       }
     }
 
-    // 3b. Update the auction summary with final standings and ended state.
+    // 3. Cancel any pending reminder jobs for this auction (they're no longer relevant)
+    const reminders = Database.getAuctionReminders(auctionId);
+    for (const reminder of reminders) {
+      ReminderScheduler.cancelReminder(reminder.id);
+    }
+
+    // 4. Update the auction summary with final standings and ended state.
     await updateAuctionSummaryMessage(container.client, auctionId, { isEnded: true });
 
-    // 4. Group winning lots by winner and DM each winner (skip for test auctions)
+    // 5. Group winning lots by winner and DM each winner (skip for test auctions)
     const dmResults = new Map<string, boolean>();
     if (!isTest) {
       const byWinner = new Map<string, LotWinnerRow[]>();
@@ -95,7 +92,7 @@ export class AuctionEndScheduler {
       }
     }
 
-    // 5. Post a summary message in the auction channel
+    // 6. Post a summary message in the auction channel
     const auction = Database.getAuction(auctionId);
     if (auction) {
       try {
@@ -109,7 +106,7 @@ export class AuctionEndScheduler {
         container.logger.error(`[AuctionEndScheduler] Failed to post auction end summary:`, err);
       }
 
-      // 6. Post the officer recap to the configured log channel (if set)
+      // 7. Post the officer recap to the configured log channel (if set)
       const logChannelId = Constants.AUCTION_LOG_CHANNEL_ID;
       if (logChannelId) {
         try {

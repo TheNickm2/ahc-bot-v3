@@ -23,6 +23,16 @@ export class ButtonHandler extends InteractionHandler {
       });
     }
 
+    const lot = Database.getAuctionLot(bid.lot_id);
+    const auction = lot ? Database.getAuction(lot.auction_id) : undefined;
+    const now = Math.floor(Date.now() / 1000);
+    if (!auction || auction.end_time <= now) {
+      return interaction.reply({
+        flags: [MessageFlags.Ephemeral],
+        content: 'This auction has already ended. Undo is no longer available.',
+      });
+    }
+
     const modal = new ModalBuilder()
       .setCustomId(`${Constants.BUTTON_IDS.BID_UNDO_REASON}:${bidId}`)
       .setTitle(`Undo Bid #${bidId}`)
