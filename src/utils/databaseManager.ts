@@ -34,6 +34,7 @@ export class DatabaseManager {
     getAuctionLots: null as Database.Statement<[string]> | null,
     insertBid: null as Database.Statement<[number, string, number]> | null,
     getBid: null as Database.Statement<[number]> | null,
+    getBidHistoryForLot: null as Database.Statement<[number]> | null,
     getTopBid: null as Database.Statement<[number]> | null,
     updateBidLogMessage: null as Database.Statement<[string, string, number]> | null,
     softDeleteBid: null as Database.Statement<[number, string, string, number]> | null,
@@ -115,6 +116,7 @@ export class DatabaseManager {
     this.statements.getAuctionLots = this.db.prepare<[string]>('SELECT * FROM auction_lots WHERE auction_id = ? ORDER BY lot_number ASC');
     this.statements.insertBid = this.db.prepare<[number, string, number]>('INSERT INTO bids (lot_id, user_id, amount) VALUES (?, ?, ?)');
     this.statements.getBid = this.db.prepare<[number]>('SELECT * FROM bids WHERE id = ?');
+    this.statements.getBidHistoryForLot = this.db.prepare<[number]>('SELECT * FROM bids WHERE lot_id = ? ORDER BY created_at ASC, id ASC');
     this.statements.getTopBid = this.db.prepare<[number]>(
       'SELECT * FROM bids WHERE lot_id = ? AND reverted_at IS NULL ORDER BY amount DESC, id DESC LIMIT 1',
     );
@@ -248,6 +250,10 @@ export class DatabaseManager {
 
   public getBid(bidId: number): BidRow | undefined {
     return this.statements.getBid!.get(bidId) as BidRow | undefined;
+  }
+
+  public getBidHistoryForLot(lotId: number): BidRow[] {
+    return this.statements.getBidHistoryForLot!.all(lotId) as BidRow[];
   }
 
   public getTopBid(lotId: number): BidRow | undefined {

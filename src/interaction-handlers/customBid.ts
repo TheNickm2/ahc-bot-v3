@@ -22,6 +22,7 @@ export class ButtonHandler extends InteractionHandler {
 
     const topBid = Database.getTopBid(lotId);
     const minBid = topBid ? topBid.amount! + 1000 : lot.starting_bid!;
+    const currentBidText = topBid ? `${topBid.amount!.toLocaleString('en-us')}g` : `${lot.starting_bid!.toLocaleString('en-us')}g (starting)`;
 
     const modal = new ModalBuilder()
       .setCustomId(`${Constants.BUTTON_IDS.BID_CUSTOM}-modal:${lotId}`)
@@ -29,6 +30,7 @@ export class ButtonHandler extends InteractionHandler {
       .addLabelComponents(
         new LabelBuilder()
           .setLabel(`Minimum bid: ${minBid.toLocaleString('en-us')}g`)
+          .setDescription(`Current bid: ${currentBidText}`)
           .setTextInputComponent(
             new TextInputBuilder().setCustomId('bid_amount').setPlaceholder('e.g. 50000 or 50k').setStyle(TextInputStyle.Short).setRequired(true),
           ),

@@ -32,10 +32,15 @@ export function AuctionLotMessageComponents({ lotInfo, lotNumber, lotId }: Aucti
     container.addTextDisplayComponents((text) => text.setContent('Place a bid using the buttons below:'));
     container.addActionRowComponents((row) =>
       row.addComponents(
-        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}:10000`).setLabel('+10k Bid').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}:25000`).setLabel('+25k Bid').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}:100000`).setLabel('+100k Bid').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}:10000`).setLabel('+10k').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}:25000`).setLabel('+25k').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lotId}:100000`).setLabel('+100k').setStyle(ButtonStyle.Secondary),
+      ),
+    );
+    container.addActionRowComponents((row) =>
+      row.addComponents(
         new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_CUSTOM}:${lotId}`).setLabel('Custom Bid').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_HISTORY}:${lotId}`).setLabel('Bid History').setStyle(ButtonStyle.Secondary),
       ),
     );
   }
@@ -199,10 +204,46 @@ export function AuctionLotWithBidComponents({ lot, lotNumber, topBid }: AuctionL
       new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lot.id}:10000`).setLabel('+10k').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lot.id}:25000`).setLabel('+25k').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_QUICK}:${lot.id}:100000`).setLabel('+100k').setStyle(ButtonStyle.Secondary),
+    ),
+  );
+  container.addActionRowComponents((row) =>
+    row.addComponents(
       new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_CUSTOM}:${lot.id}`).setLabel('Custom Bid').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_HISTORY}:${lot.id}`).setLabel('Bid History').setStyle(ButtonStyle.Secondary),
     ),
   );
   return container;
+}
+
+export function BidHistoryDMComponents({
+  lot,
+  ledgerLines,
+  activeCount,
+  revertedCount,
+  lotUrl,
+  truncatedCount,
+}: {
+  lot: AuctionLotRow;
+  ledgerLines: string[];
+  activeCount: number;
+  revertedCount: number;
+  lotUrl?: string;
+  truncatedCount?: number;
+}) {
+  const ledgerContent = ledgerLines.length > 0 ? ledgerLines.join('\n') : '*No bids have been placed on this lot yet.*';
+
+  const truncationNote =
+    truncatedCount && truncatedCount > 0 ? `\n\n*Showing latest ${ledgerLines.length} entries. ${truncatedCount} older entries omitted.*` : '';
+  const totalRecorded = activeCount + revertedCount;
+  const summaryText = `**History:** ${totalRecorded} bid${totalRecorded === 1 ? '' : 's'}${
+    revertedCount > 0 ? ` • ${revertedCount} reverted` : ''
+  }${lotUrl ? ` • [Jump to lot →](${lotUrl})` : ''}`;
+
+  return new ContainerBuilder()
+    .setAccentColor(Constants.EMBED_COLOR)
+    .addTextDisplayComponents((text) => text.setContent(`### 📜 Bid History — Lot ${lot.lot_number}: ${lot.title}`))
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addTextDisplayComponents((text) => text.setContent(`${summaryText}\n\n${ledgerContent}${truncationNote}`));
 }
 
 export interface BidLogComponentsProps {
@@ -314,6 +355,13 @@ export function AuctionLotEndedComponents({ lot }: { lot: LotWinnerRow }) {
       gallery.addItems((item) => item.setURL(lot.image!).setDescription(`Image for Lot ${lot.lot_number} - ${lot.title}`)),
     );
   }
+  container
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addActionRowComponents((row) =>
+      row.addComponents(
+        new ButtonBuilder().setCustomId(`${Constants.BUTTON_IDS.BID_HISTORY}:${lot.id}`).setLabel('Bid History').setStyle(ButtonStyle.Secondary),
+      ),
+    );
   return container;
 }
 

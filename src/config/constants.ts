@@ -29,6 +29,7 @@ export const Constants = {
     REFRESH_SHEETS: 'refresh-sheets',
     BID_QUICK: 'bid-quick',
     BID_CUSTOM: 'bid-custom',
+    BID_HISTORY: 'bid-history',
     BID_UNDO: 'bid-undo',
     BID_UNDO_REASON: 'bid-undo-reason',
     AUCTION_REMIND: 'auction-remind',
