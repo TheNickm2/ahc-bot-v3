@@ -63,29 +63,53 @@ export function AuctionSummaryMessageComponents({
   isEnded = false,
   isTest,
 }: AuctionSummaryMessageComponentsProps) {
-  const auctionList = lots
+  const lotRows = lots
     .map((lot) => {
       const lotLabel = `Lot ${lot.lot_number ?? '?'} | ${lot.title ?? 'Untitled Lot'}`;
       const jumpLink = lot.message_id
         ? `[Jump to lot →](https://discord.com/channels/${channel.guild.id}/${channel.id}/${lot.message_id})`
         : 'Jump unavailable';
-      const topBid =
+      const bidStatus =
         lot.top_bid_amount != null && lot.top_bid_user_id
-          ? `${Constants.EMOTES.COIN} ${lot.top_bid_amount.toLocaleString('en-us')} by <@${lot.top_bid_user_id}>`
-          : `${Constants.EMOTES.COIN} ${lot.starting_bid?.toLocaleString('en-us') ?? '0'} (no bids)`;
-      return `**${lotLabel}** — ${topBid} · ${jumpLink}`;
+          ? `${Constants.EMOTES.COIN} **${lot.top_bid_amount.toLocaleString('en-us')}** · Top: <@${lot.top_bid_user_id}>`
+          : `${Constants.EMOTES.COIN} **${lot.starting_bid?.toLocaleString('en-us') ?? '0'}** · No bids yet`;
+
+      return `${Constants.EMOTES.LIST_ITEM} **${lotLabel}**\n${bidStatus} · ${jumpLink}`;
     })
-    .join('\n');
+    .filter(Boolean);
+
+  const lotChunks: string[] = [];
+  const lotChunkSize = 4;
+  for (let index = 0; index < lotRows.length; index += lotChunkSize) {
+    lotChunks.push(lotRows.slice(index, index + lotChunkSize).join('\n\n'));
+  }
+
+  const endTimestamp = Math.round(endDate.getTime() / 1000);
+
   const container = new ContainerBuilder()
     .addTextDisplayComponents((text) => text.setContent(`### Auction Summary ${Constants.EMOTES.COIN}`))
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) =>
       text.setContent(
-        `${isEnded ? '**Auction Ended**' : `**Auction Ends <t:${Math.round(endDate.getTime() / 1000)}:R>**\nGet your bids in before <t:${Math.round(endDate.getTime() / 1000)}:f> (your local time) ⏰`}\n\n${auctionList}`,
+        isEnded ? '**Auction Ended**' : `**Auction Ends <t:${endTimestamp}:R>**\nGet your bids in before <t:${endTimestamp}:f> (your local time) ⏰`,
       ),
-    )
+    );
+
+  if (lotChunks.length > 0) {
+    container.addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+    lotChunks.forEach((chunk) => {
+      container.addTextDisplayComponents((text) => text.setContent(chunk));
+    });
+  } else {
+    container
+      .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+      .addTextDisplayComponents((text) => text.setContent('*No auction lots are available to display.*'));
+  }
+
+  container
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Large))
     .addTextDisplayComponents((text) => text.setContent(`**Summary Updated <t:${Math.round(Date.now() / 1000)}:R>**`));
+
   if (!isTest && !isEnded) {
     container.addActionRowComponents((row) =>
       row.addComponents(
