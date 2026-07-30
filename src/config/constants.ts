@@ -5,7 +5,7 @@ export const Constants = {
   AUCTION_OFFICER_ROLE_ID: process.env.AUCTION_OFFICER_ROLE_ID,
   EMOTES: {
     COIN: '<a:coin:726992358251561091>',
-    CHECK: '<a:check:918626532438704129>',
+    CHECK: '<:AuctionCheck:1530315256662851807>',
     CANCEL: '<a:cancel:942601332567715860>',
     LIST_ITEM: '<:purpledash:966210158990610433>',
     INFO: '<:info:985035960305745990>',

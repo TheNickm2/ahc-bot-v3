@@ -375,6 +375,34 @@ export function AuctionReminderOptInComponents({ auctionId, auctionEndTime, stat
   const dayDisabled = auctionEndTime - 86400 <= now;
   const hourDisabled = auctionEndTime - 3600 <= now;
   const minDisabled = auctionEndTime - 900 <= now;
+
+  const dayButton = new ButtonBuilder()
+    .setCustomId(`${Constants.BUTTON_IDS.AUCTION_REMIND_TOGGLE}:${auctionId}:86400`)
+    .setLabel('24h Before')
+    .setStyle(states.day ? ButtonStyle.Success : ButtonStyle.Secondary)
+    .setDisabled(dayDisabled);
+  if (states.day) {
+    dayButton.setEmoji(Constants.EMOTES.CHECK);
+  }
+
+  const hourButton = new ButtonBuilder()
+    .setCustomId(`${Constants.BUTTON_IDS.AUCTION_REMIND_TOGGLE}:${auctionId}:3600`)
+    .setLabel('1h Before')
+    .setStyle(states.hour ? ButtonStyle.Success : ButtonStyle.Secondary)
+    .setDisabled(hourDisabled);
+  if (states.hour) {
+    hourButton.setEmoji(Constants.EMOTES.CHECK);
+  }
+
+  const minButton = new ButtonBuilder()
+    .setCustomId(`${Constants.BUTTON_IDS.AUCTION_REMIND_TOGGLE}:${auctionId}:900`)
+    .setLabel('15min Before')
+    .setStyle(states.min ? ButtonStyle.Success : ButtonStyle.Secondary)
+    .setDisabled(minDisabled);
+  if (states.min) {
+    minButton.setEmoji(Constants.EMOTES.CHECK);
+  }
+
   return new ContainerBuilder()
     .addTextDisplayComponents((text) =>
       text.setContent(
@@ -382,25 +410,7 @@ export function AuctionReminderOptInComponents({ auctionId, auctionEndTime, stat
       ),
     )
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
-    .addActionRowComponents((row) =>
-      row.addComponents(
-        new ButtonBuilder()
-          .setCustomId(`${Constants.BUTTON_IDS.AUCTION_REMIND_TOGGLE}:${auctionId}:86400`)
-          .setLabel(states.day ? '✅ 24h Before' : '24h Before')
-          .setStyle(states.day ? ButtonStyle.Success : ButtonStyle.Secondary)
-          .setDisabled(dayDisabled),
-        new ButtonBuilder()
-          .setCustomId(`${Constants.BUTTON_IDS.AUCTION_REMIND_TOGGLE}:${auctionId}:3600`)
-          .setLabel(states.hour ? '✅ 1h Before' : '1h Before')
-          .setStyle(states.hour ? ButtonStyle.Success : ButtonStyle.Secondary)
-          .setDisabled(hourDisabled),
-        new ButtonBuilder()
-          .setCustomId(`${Constants.BUTTON_IDS.AUCTION_REMIND_TOGGLE}:${auctionId}:900`)
-          .setLabel(states.min ? '✅ 15min Before' : '15min Before')
-          .setStyle(states.min ? ButtonStyle.Success : ButtonStyle.Secondary)
-          .setDisabled(minDisabled),
-      ),
-    );
+    .addActionRowComponents((row) => row.addComponents(dayButton, hourButton, minButton));
 }
 
 export function AuctionLotEndedComponents({ lot }: { lot: LotWinnerRow }) {
@@ -454,21 +464,23 @@ export interface OutbidNotifyComponentsProps {
   isSubscribed: boolean;
 }
 export function OutbidNotifyComponents({ auctionId, isSubscribed }: OutbidNotifyComponentsProps) {
+  const outbidNotifyButton = new ButtonBuilder()
+    .setCustomId(`${Constants.BUTTON_IDS.OUTBID_NOTIFY_TOGGLE}:${auctionId}`)
+    .setLabel(isSubscribed ? 'Alerts On - Click to Disable' : 'Alerts Off - Click to Enable')
+    .setStyle(isSubscribed ? ButtonStyle.Success : ButtonStyle.Secondary);
+
+  if (isSubscribed) {
+    outbidNotifyButton.setEmoji(Constants.EMOTES.CHECK);
+  }
+
   return new ContainerBuilder()
     .addTextDisplayComponents((text) =>
       text.setContent(
-        `### 💸 Outbid Alerts\nIf you're the leading bidder on a lot and someone outbids you, you'll receive a DM with a link directly to the lot.\n\nCurrent status: **${isSubscribed ? 'Enabled ✅' : 'Disabled'}**`,
+        `### 💸 Outbid Alerts\nIf you're the leading bidder on a lot and someone outbids you, you'll receive a DM with a link directly to the lot.\n\nCurrent status: **${isSubscribed ? `Enabled ${Constants.EMOTES.CHECK}` : 'Disabled'}**`,
       ),
     )
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
-    .addActionRowComponents((row) =>
-      row.addComponents(
-        new ButtonBuilder()
-          .setCustomId(`${Constants.BUTTON_IDS.OUTBID_NOTIFY_TOGGLE}:${auctionId}`)
-          .setLabel(isSubscribed ? '✅ Alerts On — Click to Disable' : 'Alerts Off — Click to Enable')
-          .setStyle(isSubscribed ? ButtonStyle.Success : ButtonStyle.Secondary),
-      ),
-    );
+    .addActionRowComponents((row) => row.addComponents(outbidNotifyButton));
 }
 
 export interface OutbidDMComponentsProps {
@@ -511,22 +523,28 @@ export interface OfficerAuctionRecapComponentsProps {
   auctionEndTime: number;
 }
 export function OfficerAuctionRecapComponents({ winners, dmResults, isTest, auctionEndTime }: OfficerAuctionRecapComponentsProps) {
-  const lotLines = winners
+  const lotRows = winners
     .map((lot) => {
       const lotLabel = `**Lot ${lot.lot_number}: ${lot.title}**`;
       if (!lot.winner_user_id || lot.winning_amount == null) {
-        return `\`${String(lot.lot_number!).padStart(2, ' ')}.\` ${lotLabel} — *No bids placed*`;
+        return `${Constants.EMOTES.LIST_ITEM} ${lotLabel}\n${Constants.EMOTES.COIN} No bids placed`;
       }
       const bidStr = formatBidAmount(lot.winning_amount);
       let dmStatus: string;
       if (isTest) {
         dmStatus = '*(test — DM suppressed)*';
       } else {
-        dmStatus = dmResults.get(lot.winner_user_id) ? '✅ DM sent' : '⚠️ DM failed';
+        dmStatus = dmResults.get(lot.winner_user_id) ? `${Constants.EMOTES.CHECK} DM sent` : '⚠️ DM failed';
       }
-      return `\`${String(lot.lot_number!).padStart(2, ' ')}.\` ${lotLabel} — <@${lot.winner_user_id}> — ${bidStr} — ${dmStatus}`;
+      return `${Constants.EMOTES.LIST_ITEM} ${lotLabel}\nWinner: <@${lot.winner_user_id}> · Bid: ${Constants.EMOTES.COIN} **${bidStr}**\nDM: ${dmStatus}`;
     })
-    .join('\n');
+    .filter(Boolean);
+
+  const lotChunks: string[] = [];
+  const lotChunkSize = 4;
+  for (let index = 0; index < lotRows.length; index += lotChunkSize) {
+    lotChunks.push(lotRows.slice(index, index + lotChunkSize).join('\n\n'));
+  }
 
   const grandTotal = winners.reduce((sum, lot) => sum + (lot.winning_amount ?? 0), 0);
   const grandTotalStr = formatBidAmount(grandTotal);
@@ -535,8 +553,25 @@ export function OfficerAuctionRecapComponents({ winners, dmResults, isTest, auct
     .setAccentColor(Constants.EMBED_COLOR)
     .addTextDisplayComponents((text) => text.setContent(`### Auction Winner Log${isTest ? ' *(test run)*' : ''}\nEnded <t:${auctionEndTime}:F>`))
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
-    .addTextDisplayComponents((text) => text.setContent(lotLines))
-    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addTextDisplayComponents((text) =>
+      text.setContent(
+        `**${winners.length} lot${winners.length === 1 ? '' : 's'} processed** · ${isTest ? 'Test mode (winner DMs suppressed)' : 'Live mode (winner DMs attempted)'}`,
+      ),
+    );
+
+  if (lotChunks.length > 0) {
+    container.addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+    lotChunks.forEach((chunk) => {
+      container.addTextDisplayComponents((text) => text.setContent(chunk));
+    });
+  } else {
+    container
+      .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+      .addTextDisplayComponents((text) => text.setContent('*No lots were available for recap.*'));
+  }
+
+  container
+    .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Large))
     .addTextDisplayComponents((text) => text.setContent(`💰 **Grand Total: ${grandTotalStr}**`));
 
   return container;
