@@ -74,7 +74,7 @@ export function AuctionSummaryMessageComponents({
           ? `${Constants.EMOTES.COIN} **${lot.top_bid_amount.toLocaleString('en-us')}** · Top: <@${lot.top_bid_user_id}>`
           : `${Constants.EMOTES.COIN} **${lot.starting_bid?.toLocaleString('en-us') ?? '0'}** · No bids yet`;
 
-      return `${Constants.EMOTES.LIST_ITEM} **${lotLabel}**\n${bidStatus} · ${jumpLink}`;
+      return `**${lotLabel}**\n${bidStatus} · ${jumpLink}`;
     })
     .filter(Boolean);
 
@@ -527,7 +527,7 @@ export function OfficerAuctionRecapComponents({ winners, dmResults, isTest, auct
     .map((lot) => {
       const lotLabel = `**Lot ${lot.lot_number}: ${lot.title}**`;
       if (!lot.winner_user_id || lot.winning_amount == null) {
-        return `${Constants.EMOTES.LIST_ITEM} ${lotLabel}\n${Constants.EMOTES.COIN} No bids placed`;
+        return `${lotLabel}\n${Constants.EMOTES.COIN} No bids placed`;
       }
       const bidStr = formatBidAmount(lot.winning_amount);
       let dmStatus: string;
@@ -536,7 +536,7 @@ export function OfficerAuctionRecapComponents({ winners, dmResults, isTest, auct
       } else {
         dmStatus = dmResults.get(lot.winner_user_id) ? `${Constants.EMOTES.CHECK} DM sent` : '⚠️ DM failed';
       }
-      return `${Constants.EMOTES.LIST_ITEM} ${lotLabel}\nWinner: <@${lot.winner_user_id}> · Bid: ${Constants.EMOTES.COIN} **${bidStr}**\nDM: ${dmStatus}`;
+      return `${lotLabel}\nWinner: <@${lot.winner_user_id}> · Bid: ${Constants.EMOTES.COIN} **${bidStr}**\nDM: ${dmStatus}`;
     })
     .filter(Boolean);
 
