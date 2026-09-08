@@ -56,21 +56,27 @@ export class ModalHandler extends InteractionHandler {
         if (isFromMessage)
           return interaction.followUp({ flags: [MessageFlags.Ephemeral], content: 'This auction has already ended. Undo is no longer available.' });
         return interaction.editReply({ content: 'This auction has already ended. Undo is no longer available.' });
-      case 'reverted':
-        await closeBidderUndoWindow(interaction.client, bidId, 'reverted');
+      case 'reverted': {
+        const closeUndoPromise = closeBidderUndoWindow(interaction.client, bidId, 'reverted');
 
         if (!isFromMessage) {
+          await closeUndoPromise;
           return interaction.editReply({ content: 'Bid reverted, but the log message could not be updated automatically.' });
         }
 
-        await interaction.editReply({
-          components: [RevertedBidLogComponents({ bid: result.bid, lot: result.lot })],
-        });
+        // Distinct messages (bidder confirmation DM vs. this bid log message), safe to run concurrently.
+        await Promise.all([
+          closeUndoPromise,
+          interaction.editReply({
+            components: [RevertedBidLogComponents({ bid: result.bid, lot: result.lot })],
+          }),
+        ]);
 
         return interaction.followUp({
           flags: [MessageFlags.Ephemeral],
           content: `Bid #${bidId} has been reverted.`,
         });
+      }
     }
   }
 

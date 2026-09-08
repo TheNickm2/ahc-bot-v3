@@ -11,8 +11,7 @@ export class ButtonHandler extends InteractionHandler {
     if (!interaction.inGuild) return;
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
     const guild = interaction.guild;
-    await guild?.members.fetch();
-    await guild?.roles.fetch();
+    await Promise.all([guild?.members.fetch(), guild?.roles.fetch()]);
     const role = guild?.roles.premiumSubscriberRole;
     if (!role) {
       return await interaction.editReply({

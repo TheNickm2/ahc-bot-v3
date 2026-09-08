@@ -91,32 +91,35 @@ export class ModalHandler extends InteractionHandler {
         if (isFromMessage) return interaction.followUp({ content: 'This auction has already ended. Undo is no longer available.' });
         return interaction.editReply({ content: 'This auction has already ended. Undo is no longer available.' });
       case 'reverted': {
-        await closeBidderUndoWindow(interaction.client, bidId, 'reverted');
-        await updateBidLogMessageAsReverted(interaction.client, result.bid, result.lot);
-
         const officerRoleId = Constants.AUCTION_OFFICER_ROLE_ID;
         const mention = officerRoleId ? `<@&${officerRoleId}> ` : '';
         const alertChannelId = result.bid.bid_log_channel_id ?? Constants.AUCTION_BID_LOG_CHANNEL_ID;
 
-        if (alertChannelId) {
-          try {
-            const channel = interaction.client.channels.cache.get(alertChannelId) ?? (await interaction.client.channels.fetch(alertChannelId));
-            if (channel?.isSendable()) {
-              await channel.send({
-                content:
-                  `${mention}User self-reverted a bid.\n` +
-                  `**Bidder:** <@${interaction.user.id}>\n` +
-                  `**Bid:** #${result.bid.id} (${Constants.EMOTES.COIN} ${result.bid.amount!.toLocaleString('en-us')})\n` +
-                  `**Lot:** ${result.lot.lot_number}: ${result.lot.title} (ID: ${result.lot.id})\n` +
-                  `**Reason:** ${reason}\n` +
-                  `**Reverted At:** <t:${result.bid.reverted_at}:F>`,
-                ...(officerRoleId ? { allowedMentions: { roles: [officerRoleId] } } : {}),
-              });
+        // These each touch a distinct message/channel and already handle their own errors internally.
+        await Promise.all([
+          closeBidderUndoWindow(interaction.client, bidId, 'reverted'),
+          updateBidLogMessageAsReverted(interaction.client, result.bid, result.lot),
+          (async () => {
+            if (!alertChannelId) return;
+            try {
+              const channel = interaction.client.channels.cache.get(alertChannelId) ?? (await interaction.client.channels.fetch(alertChannelId));
+              if (channel?.isSendable()) {
+                await channel.send({
+                  content:
+                    `${mention}User self-reverted a bid.\n` +
+                    `**Bidder:** <@${interaction.user.id}>\n` +
+                    `**Bid:** #${result.bid.id} (${Constants.EMOTES.COIN} ${result.bid.amount!.toLocaleString('en-us')})\n` +
+                    `**Lot:** ${result.lot.lot_number}: ${result.lot.title} (ID: ${result.lot.id})\n` +
+                    `**Reason:** ${reason}\n` +
+                    `**Reverted At:** <t:${result.bid.reverted_at}:F>`,
+                  ...(officerRoleId ? { allowedMentions: { roles: [officerRoleId] } } : {}),
+                });
+              }
+            } catch (err) {
+              interaction.client.logger.error(`bidSelfUndoModal: failed to post officer alert for bid ${bidId}:`, err);
             }
-          } catch (err) {
-            interaction.client.logger.error(`bidSelfUndoModal: failed to post officer alert for bid ${bidId}:`, err);
-          }
-        }
+          })(),
+        ]);
 
         if (isFromMessage) {
           return interaction.followUp({ content: `Your bid #${bidId} has been reverted.` });

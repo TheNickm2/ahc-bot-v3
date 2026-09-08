@@ -223,18 +223,20 @@ export async function placeAuctionBid({ client, userId, guildId, lot, auction, a
     throw new Error(`auctionBidFlow: could not rehydrate placed bid for lot ${lot.id}.`);
   }
 
-  await refreshAuctionLotMessage(client, lot, topBid);
-  await updateAuctionSummaryMessage(client, lot.auction_id);
-
-  if (previousTopBid?.id) {
-    await closeBidderUndoWindow(client, previousTopBid.id, 'outbid');
-  }
-
-  await sendOutbidDm({ client, previousTopBid, lot, auction, newAmount: amount, guildId });
-  await logBid(client, bid, lot);
+  // All of these touch distinct messages/channels and never throw (errors are caught and logged internally),
+  // so they can safely run concurrently instead of waiting on each other one at a time.
+  const confirmationDmPromise = sendBidConfirmationDm({ client, bid, lot, guildId });
+  await Promise.all([
+    refreshAuctionLotMessage(client, lot, topBid),
+    updateAuctionSummaryMessage(client, lot.auction_id),
+    previousTopBid?.id ? closeBidderUndoWindow(client, previousTopBid.id, 'outbid') : undefined,
+    sendOutbidDm({ client, previousTopBid, lot, auction, newAmount: amount, guildId }),
+    logBid(client, bid, lot),
+    confirmationDmPromise,
+  ]);
 
   const undoUntil = Math.min((bid.created_at ?? Math.floor(Date.now() / 1000)) + USER_UNDO_WINDOW_SECONDS, auction.end_time);
-  const confirmation = await sendBidConfirmationDm({ client, bid, lot, guildId });
+  const confirmation = await confirmationDmPromise;
   if (confirmation) {
     Database.updateBidderConfirmationMessage({
       bidId: bid.id,
@@ -269,8 +271,7 @@ export async function revertAuctionBid({ client, bidId, revertedBy, reason }: Re
   const updatedBid = Database.getBid(bidId);
   if (!updatedBid) return { status: 'missing-bid' };
 
-  await refreshAuctionLotMessage(client, lot, Database.getTopBid(lot.id));
-  await updateAuctionSummaryMessage(client, lot.auction_id);
+  await Promise.all([refreshAuctionLotMessage(client, lot, Database.getTopBid(lot.id)), updateAuctionSummaryMessage(client, lot.auction_id)]);
 
   return { status: 'reverted', bid: updatedBid, lot };
 }
@@ -333,44 +334,48 @@ export async function closeBidderUndoWindow(client: SapphireClient, bidId: numbe
 
 export async function closeBidderUndoWindowsForAuction(client: SapphireClient, auctionId: string): Promise<void> {
   const openBids = Database.getBidsWithOpenBidderUndoWindowForAuction(auctionId);
-  for (const bid of openBids) {
-    await closeBidderUndoWindow(client, bid.id, 'auction-ended');
-  }
+  // Each bid's undo window targets a distinct DM message, so these can be closed concurrently.
+  await Promise.all(openBids.map((bid) => closeBidderUndoWindow(client, bid.id, 'auction-ended')));
 }
 
 export async function rehydrateBidderUndoWindowJobs(client: SapphireClient): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   const openBids = Database.getBidsWithOpenBidderUndoWindow();
 
+  const expiredClosures: Promise<void>[] = [];
   for (const bid of openBids) {
     if (!bid.bidder_undo_until || bid.bidder_undo_until <= now) {
-      await closeBidderUndoWindow(client, bid.id, 'expired');
+      expiredClosures.push(closeBidderUndoWindow(client, bid.id, 'expired'));
       continue;
     }
     scheduleBidderUndoExpiry(client, bid);
   }
+  await Promise.all(expiredClosures);
 }
 
 export async function disableAuctionBidUndoButtons(client: SapphireClient, auctionId: string) {
   const activeBidLogs = Database.getActiveBidLogsForAuction(auctionId);
 
-  for (const bid of activeBidLogs) {
-    if (!bid.bid_log_channel_id || !bid.bid_log_message_id) continue;
+  // Each bid log lives on a distinct message, so these edits are independent of one another.
+  await Promise.all(
+    activeBidLogs.map(async (bid) => {
+      if (!bid.bid_log_channel_id || !bid.bid_log_message_id) return;
 
-    const lot = Database.getAuctionLot(bid.lot_id);
-    if (!lot) continue;
+      const lot = Database.getAuctionLot(bid.lot_id);
+      if (!lot) return;
 
-    try {
-      const channel = client.channels.cache.get(bid.bid_log_channel_id) ?? (await client.channels.fetch(bid.bid_log_channel_id));
-      if (!channel?.isTextBased()) continue;
+      try {
+        const channel = client.channels.cache.get(bid.bid_log_channel_id) ?? (await client.channels.fetch(bid.bid_log_channel_id));
+        if (!channel?.isTextBased()) return;
 
-      const message = await channel.messages.fetch(bid.bid_log_message_id);
-      await message.edit({
-        components: [BidLogComponents({ bid, lot, includeUndo: false, note: 'Auction complete. Undo is no longer available.' })],
-        flags: [MessageFlags.IsComponentsV2],
-      });
-    } catch (err) {
-      client.logger.error(`auctionBidFlow: failed to disable undo button for bid ${bid.id}:`, err);
-    }
-  }
+        const message = await channel.messages.fetch(bid.bid_log_message_id);
+        await message.edit({
+          components: [BidLogComponents({ bid, lot, includeUndo: false, note: 'Auction complete. Undo is no longer available.' })],
+          flags: [MessageFlags.IsComponentsV2],
+        });
+      } catch (err) {
+        client.logger.error(`auctionBidFlow: failed to disable undo button for bid ${bid.id}:`, err);
+      }
+    }),
+  );
 }
