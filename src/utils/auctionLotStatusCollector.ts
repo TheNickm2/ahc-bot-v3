@@ -9,14 +9,18 @@ import { AuctionLotEndedComponents } from './messageComponentUtil';
 type AuctionLotStatus = 'paid' | 'sent';
 
 export class AuctionLotStatusCollector {
-  private readonly watchedLots = new Map<string, number>();
+  private readonly watchedLots = new Map<string, { lotId: number; isPaid: boolean; isSent: boolean }>();
   private readonly updateQueues = new Map<number, Promise<void>>();
   private listening = false;
 
   public watchAuction(client: SapphireClient, auctionId: string): void {
     for (const lot of Database.getWinnersForAuction(auctionId)) {
       if (lot.channel_id && lot.message_id) {
-        this.watchedLots.set(`${lot.channel_id}:${lot.message_id}`, lot.id);
+        this.watchedLots.set(`${lot.channel_id}:${lot.message_id}`, {
+          lotId: lot.id,
+          isPaid: lot.is_paid === 1,
+          isSent: lot.is_sent === 1,
+        });
       }
     }
     this.start(client);
@@ -24,7 +28,11 @@ export class AuctionLotStatusCollector {
 
   public rehydrate(client: SapphireClient): void {
     for (const lot of Database.getCompletedAuctionWinners()) {
-      this.watchedLots.set(`${lot.channel_id}:${lot.message_id}`, lot.id);
+      this.watchedLots.set(`${lot.channel_id}:${lot.message_id}`, {
+        lotId: lot.id,
+        isPaid: lot.is_paid === 1,
+        isSent: lot.is_sent === 1,
+      });
     }
     this.start(client);
   }
@@ -44,17 +52,30 @@ export class AuctionLotStatusCollector {
 
   private async handleReaction(client: SapphireClient, reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser): Promise<void> {
     if (user.bot) return;
+    const status = this.getStatus(reaction.emoji.name);
+    if (!status) return;
+
+    const lotKey = `${reaction.message.channelId}:${reaction.message.id}`;
+    const watchedLot = this.watchedLots.get(lotKey);
+    if (!watchedLot) return;
+    if (status === 'paid' ? watchedLot.isPaid : watchedLot.isSent) return;
+
     if (reaction.partial) await reaction.fetch();
     const message = reaction.message.partial ? await reaction.message.fetch() : reaction.message;
-    const lotId = this.watchedLots.get(`${message.channelId}:${message.id}`);
-    if (!lotId || !message.guild) return;
+    if (!message.guild || !(await this.isAuctionOfficer(message.guild, user.id))) return;
 
-    const status = this.getStatus(reaction.emoji.name);
-    if (!status || !(await this.isAuctionOfficer(message.guild, user.id))) return;
+    await this.enqueueLotUpdate(watchedLot.lotId, async () => {
+      const alreadyMarked = status === 'paid' ? watchedLot.isPaid : watchedLot.isSent;
+      if (alreadyMarked) return;
 
-    await this.enqueueLotUpdate(lotId, async () => {
-      Database.markAuctionLotStatus(lotId, status);
-      const lot = Database.getWinnerForLot(lotId);
+      if (!Database.markAuctionLotStatus(watchedLot.lotId, status)) return;
+      if (status === 'paid') {
+        watchedLot.isPaid = true;
+      } else {
+        watchedLot.isSent = true;
+      }
+
+      const lot = Database.getWinnerForLot(watchedLot.lotId);
       if (!lot) return;
 
       await Promise.all([

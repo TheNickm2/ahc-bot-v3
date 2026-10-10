@@ -179,8 +179,8 @@ export class DatabaseManager {
       )
       WHERE al.id = ?
     `);
-    this.statements.markAuctionLotPaid = this.db.prepare<[number]>('UPDATE auction_lots SET is_paid = 1 WHERE id = ?');
-    this.statements.markAuctionLotSent = this.db.prepare<[number]>('UPDATE auction_lots SET is_sent = 1 WHERE id = ?');
+    this.statements.markAuctionLotPaid = this.db.prepare<[number]>('UPDATE auction_lots SET is_paid = 1 WHERE id = ? AND is_paid = 0');
+    this.statements.markAuctionLotSent = this.db.prepare<[number]>('UPDATE auction_lots SET is_sent = 1 WHERE id = ? AND is_sent = 0');
     this.statements.insertBid = this.db.prepare<[number, string, number]>('INSERT INTO bids (lot_id, user_id, amount) VALUES (?, ?, ?)');
     this.statements.getBid = this.db.prepare<[number]>('SELECT * FROM bids WHERE id = ?');
     this.statements.getBidHistoryForLot = this.db.prepare<[number]>('SELECT * FROM bids WHERE lot_id = ? ORDER BY created_at ASC, id ASC');
@@ -406,9 +406,9 @@ export class DatabaseManager {
     return this.statements.getWinnerForLot!.get(lotId) as LotWinnerRow | undefined;
   }
 
-  public markAuctionLotStatus(lotId: number, status: 'paid' | 'sent'): void {
+  public markAuctionLotStatus(lotId: number, status: 'paid' | 'sent'): boolean {
     const statement = status === 'paid' ? this.statements.markAuctionLotPaid : this.statements.markAuctionLotSent;
-    statement!.run(lotId);
+    return statement!.run(lotId).changes > 0;
   }
 
   // Outbid subscription methods
