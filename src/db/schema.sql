@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS auction_lots (
   description TEXT,
   image TEXT,
   starting_bid INTEGER,
+  is_paid INTEGER NOT NULL DEFAULT 0,
+  is_sent INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE
 );
 

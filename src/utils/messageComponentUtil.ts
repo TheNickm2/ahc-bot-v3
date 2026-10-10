@@ -73,8 +73,14 @@ export function AuctionSummaryMessageComponents({
         lot.top_bid_amount != null && lot.top_bid_user_id
           ? `${Constants.EMOTES.COIN} **${lot.top_bid_amount.toLocaleString('en-us')}** · Top: <@${lot.top_bid_user_id}>`
           : `${Constants.EMOTES.COIN} **${lot.starting_bid?.toLocaleString('en-us') ?? '0'}** · No bids yet`;
+      const fulfillmentStatus = [
+        lot.is_paid === 1 ? `${Constants.EMOTES.BANK} Paid` : null,
+        lot.is_sent === 1 ? `${Constants.EMOTES.MAIL} Sent` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ');
 
-      return `**${lotLabel}**\n${bidStatus} · ${jumpLink}`;
+      return `**${lotLabel}**\n${bidStatus} · ${jumpLink}${fulfillmentStatus ? `\n**Status:** ${fulfillmentStatus}` : ''}`;
     })
     .filter(Boolean);
 
@@ -426,6 +432,17 @@ export function AuctionLotEndedComponents({ lot }: { lot: LotWinnerRow }) {
     .addSeparatorComponents((separator) => separator.setDivider(false).setSpacing(SeparatorSpacingSize.Small))
     .addTextDisplayComponents((text) => text.setContent(resultText))
     .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Large));
+  const fulfillmentStatus = [
+    lot.is_paid === 1 ? `${Constants.EMOTES.BANK} **Paid**` : null,
+    lot.is_sent === 1 ? `${Constants.EMOTES.MAIL} **Sent**` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  if (fulfillmentStatus) {
+    container
+      .addTextDisplayComponents((text) => text.setContent(`**Status:** ${fulfillmentStatus}`))
+      .addSeparatorComponents((separator) => separator.setDivider(true).setSpacing(SeparatorSpacingSize.Small));
+  }
   if (lot.image) {
     container.addMediaGalleryComponents((gallery) =>
       gallery.addItems((item) => item.setURL(lot.image!).setDescription(`Image for Lot ${lot.lot_number} - ${lot.title}`)),

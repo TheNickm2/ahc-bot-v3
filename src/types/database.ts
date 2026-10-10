@@ -45,6 +45,8 @@ export interface AuctionLotRow {
   description: string | null;
   image: string | null;
   starting_bid: number | null;
+  is_paid: number;
+  is_sent: number;
 }
 
 export interface AuctionLotInsert {
@@ -113,6 +115,8 @@ export interface AuctionSummaryLotRow {
   starting_bid: number | null;
   top_bid_user_id: string | null;
   top_bid_amount: number | null;
+  is_paid: number;
+  is_sent: number;
 }
 
 export interface OutbidSubscriptionRow {

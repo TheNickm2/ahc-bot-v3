@@ -6,8 +6,11 @@ import { AuctionLotEndedComponents, OfficerAuctionRecapComponents, WinnerDMMessa
 import type { LotWinnerRow } from '../types/database';
 import { Constants } from '../config/constants';
 import { closeBidderUndoWindowsForAuction, updateAuctionSummaryMessage } from './auctionBidFlow';
+import { AuctionLotStatusCollector } from './auctionLotStatusCollector';
 
 export class AuctionEndScheduler {
+  private readonly lotStatusCollector = new AuctionLotStatusCollector();
+
   constructor() {
     // Rehydrate: re-register the end job for any auction still active in the DB.
     // Mirrors the pattern used by ReminderScheduleManager.
@@ -33,6 +36,10 @@ export class AuctionEndScheduler {
       job.cancel();
       container.logger.debug(`[AuctionEndScheduler] Cancelled end job for auction ${auctionId}.`);
     }
+  }
+
+  public rehydrateLotStatusCollector(): void {
+    this.lotStatusCollector.rehydrate(container.client);
   }
 
   private async executeAuctionEnd(auctionId: string, isTest: boolean): Promise<void> {
@@ -101,7 +108,9 @@ export class AuctionEndScheduler {
       );
     }
 
-    await Promise.all([lotEditsPromise, closeUndoWindowsPromise, summaryPromise, dmPromise]);
+    await Promise.all([lotEditsPromise, closeUndoWindowsPromise, summaryPromise]);
+    this.lotStatusCollector.watchAuction(container.client, auctionId);
+    await dmPromise;
 
     // 7. Post a summary message in the auction channel, and 8. the officer recap to the log
     // channel. The recap depends on dmResults (from step 6, awaited above) but the two posts are

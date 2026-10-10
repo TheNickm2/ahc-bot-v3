@@ -3,6 +3,7 @@ import { Listener } from '@sapphire/framework';
 import type { StoreRegistryValue } from '@sapphire/pieces';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
 import { rehydrateBidderUndoWindowJobs } from '../utils/auctionBidFlow';
+import { AuctionEndScheduler } from '../state/state';
 
 const dev = process.env.NODE_ENV !== 'production';
 
@@ -14,6 +15,7 @@ export class UserEvent extends Listener {
     this.printBanner();
     this.printStoreDebugInformation();
     await rehydrateBidderUndoWindowJobs(this.container.client);
+    AuctionEndScheduler.rehydrateLotStatusCollector();
   }
 
   private printBanner() {

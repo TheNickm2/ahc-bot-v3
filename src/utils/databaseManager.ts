@@ -33,6 +33,11 @@ export class DatabaseManager {
     updateAuctionLotMessageId: null as Database.Statement<[string, number]> | null,
     getAuctionLot: null as Database.Statement<[number]> | null,
     getAuctionLots: null as Database.Statement<[string]> | null,
+    getWinnersForAuction: null as Database.Statement<[string]> | null,
+    getCompletedAuctionWinners: null as Database.Statement | null,
+    getWinnerForLot: null as Database.Statement<[number]> | null,
+    markAuctionLotPaid: null as Database.Statement<[number]> | null,
+    markAuctionLotSent: null as Database.Statement<[number]> | null,
     insertBid: null as Database.Statement<[number, string, number]> | null,
     getBid: null as Database.Statement<[number]> | null,
     getBidHistoryForLot: null as Database.Statement<[number]> | null,
@@ -68,6 +73,16 @@ export class DatabaseManager {
       this.db.exec('ALTER TABLE auction_lots ADD COLUMN image TEXT');
     } catch {
       // Columns already exist
+    }
+    try {
+      this.db.exec('ALTER TABLE auction_lots ADD COLUMN is_paid INTEGER NOT NULL DEFAULT 0');
+    } catch {
+      // Column already exists
+    }
+    try {
+      this.db.exec('ALTER TABLE auction_lots ADD COLUMN is_sent INTEGER NOT NULL DEFAULT 0');
+    } catch {
+      // Column already exists
     }
     try {
       this.db.exec('ALTER TABLE bids ADD COLUMN reverted_at INTEGER');
@@ -137,6 +152,35 @@ export class DatabaseManager {
     this.statements.updateAuctionLotMessageId = this.db.prepare<[string, number]>('UPDATE auction_lots SET message_id = ? WHERE id = ?');
     this.statements.getAuctionLot = this.db.prepare<[number]>('SELECT * FROM auction_lots WHERE id = ?');
     this.statements.getAuctionLots = this.db.prepare<[string]>('SELECT * FROM auction_lots WHERE auction_id = ? ORDER BY lot_number ASC');
+    this.statements.getWinnersForAuction = this.db.prepare<[string]>(`
+      SELECT al.*, b.user_id AS winner_user_id, b.amount AS winning_amount
+      FROM auction_lots al
+      LEFT JOIN bids b ON b.id = (
+        SELECT id FROM bids WHERE lot_id = al.id AND reverted_at IS NULL ORDER BY amount DESC, id DESC LIMIT 1
+      )
+      WHERE al.auction_id = ?
+      ORDER BY al.lot_number ASC
+    `);
+    this.statements.getCompletedAuctionWinners = this.db.prepare(`
+      SELECT al.*, b.user_id AS winner_user_id, b.amount AS winning_amount
+      FROM auction_lots al
+      JOIN auctions a ON a.id = al.auction_id
+      LEFT JOIN bids b ON b.id = (
+        SELECT id FROM bids WHERE lot_id = al.id AND reverted_at IS NULL ORDER BY amount DESC, id DESC LIMIT 1
+      )
+      WHERE a.end_time <= strftime('%s', 'now') AND al.message_id IS NOT NULL AND al.channel_id IS NOT NULL
+      ORDER BY a.end_time ASC, al.lot_number ASC
+    `);
+    this.statements.getWinnerForLot = this.db.prepare<[number]>(`
+      SELECT al.*, b.user_id AS winner_user_id, b.amount AS winning_amount
+      FROM auction_lots al
+      LEFT JOIN bids b ON b.id = (
+        SELECT id FROM bids WHERE lot_id = al.id AND reverted_at IS NULL ORDER BY amount DESC, id DESC LIMIT 1
+      )
+      WHERE al.id = ?
+    `);
+    this.statements.markAuctionLotPaid = this.db.prepare<[number]>('UPDATE auction_lots SET is_paid = 1 WHERE id = ?');
+    this.statements.markAuctionLotSent = this.db.prepare<[number]>('UPDATE auction_lots SET is_sent = 1 WHERE id = ?');
     this.statements.insertBid = this.db.prepare<[number, string, number]>('INSERT INTO bids (lot_id, user_id, amount) VALUES (?, ?, ?)');
     this.statements.getBid = this.db.prepare<[number]>('SELECT * FROM bids WHERE id = ?');
     this.statements.getBidHistoryForLot = this.db.prepare<[number]>('SELECT * FROM bids WHERE lot_id = ? ORDER BY created_at ASC, id ASC');
@@ -250,6 +294,8 @@ export class DatabaseManager {
         al.title,
         al.message_id,
         al.starting_bid,
+        al.is_paid,
+        al.is_sent,
         b.user_id AS top_bid_user_id,
         b.amount AS top_bid_amount
       FROM auction_lots al
@@ -349,16 +395,20 @@ export class DatabaseManager {
   }
 
   public getWinnersForAuction(auctionId: string): LotWinnerRow[] {
-    const statement = this.db.prepare<[string]>(`
-      SELECT al.*, b.user_id AS winner_user_id, b.amount AS winning_amount
-      FROM auction_lots al
-      LEFT JOIN bids b ON b.id = (
-        SELECT id FROM bids WHERE lot_id = al.id AND reverted_at IS NULL ORDER BY amount DESC, id DESC LIMIT 1
-      )
-      WHERE al.auction_id = ?
-      ORDER BY al.lot_number ASC
-    `);
-    return statement.all(auctionId) as LotWinnerRow[];
+    return this.statements.getWinnersForAuction!.all(auctionId) as LotWinnerRow[];
+  }
+
+  public getCompletedAuctionWinners(): LotWinnerRow[] {
+    return this.statements.getCompletedAuctionWinners!.all() as LotWinnerRow[];
+  }
+
+  public getWinnerForLot(lotId: number): LotWinnerRow | undefined {
+    return this.statements.getWinnerForLot!.get(lotId) as LotWinnerRow | undefined;
+  }
+
+  public markAuctionLotStatus(lotId: number, status: 'paid' | 'sent'): void {
+    const statement = status === 'paid' ? this.statements.markAuctionLotPaid : this.statements.markAuctionLotSent;
+    statement!.run(lotId);
   }
 
   // Outbid subscription methods

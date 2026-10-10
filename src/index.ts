@@ -1,7 +1,7 @@
 import './lib/setup';
 
 import { LogLevel, SapphireClient } from '@sapphire/framework';
-import { GatewayIntentBits } from 'discord.js';
+import { GatewayIntentBits, Partials } from 'discord.js';
 import { MemberCacheManagerInstance } from './state/state';
 
 const client = new SapphireClient({
@@ -16,7 +16,9 @@ const client = new SapphireClient({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessageReactions,
   ],
+  partials: [Partials.Channel, Partials.Message, Partials.Reaction],
   loadMessageCommandListeners: true,
 });
 
